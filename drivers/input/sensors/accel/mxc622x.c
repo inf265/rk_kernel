@@ -54,7 +54,7 @@
 #define MXC6225_GRAVITY_STEP	15625 //	(MXC6225_RANGE / MXC6225_BOUNDARY)
 
 #define MXC6225_COUNT_AVERAGE	2
-
+#define DBG(x...)  printk(x)
 struct sensor_axis_average {
 		int x_average;
 		int y_average;
@@ -167,11 +167,19 @@ static int gsensor_report_value(struct i2c_client *client, struct sensor_axis *a
 	    (struct sensor_private_data *) i2c_get_clientdata(client);	
 
 	/* Report acceleration sensor information */
+    // 三个方向正确，一个不正确
+#if 1
+	input_report_abs(sensor->input_dev, ABS_X, -axis->x);
+	input_report_abs(sensor->input_dev, ABS_Y, axis->z);
+	input_report_abs(sensor->input_dev, ABS_Z, axis->y);
+#endif
+    
 	input_report_abs(sensor->input_dev, ABS_X, axis->x);
 	input_report_abs(sensor->input_dev, ABS_Y, axis->y);
 	input_report_abs(sensor->input_dev, ABS_Z, axis->z);
+
 	input_sync(sensor->input_dev);
-	DBG("Gsensor x==%d  y==%d z==%d\n",axis->x,axis->y,axis->z);
+	//DBG("Gsensor x==%d  y==%d z==%d\n",axis->x,axis->y,axis->z);
 
 	return 0;
 }
@@ -226,7 +234,7 @@ static int sensor_report_value(struct i2c_client *client)
 		axis.y = axis_average.y_average / axis_average.count;	
 		axis.z = axis_average.z_average / axis_average.count;
 		
-		DBG( "%s: axis = %d  %d  %d \n", __func__, axis.x, axis.y, axis.z);
+		// DBG( "%s: axis = %d  %d  %d \n", __func__, axis.x, axis.y, axis.z);
 		
 		memset(&axis_average, 0, sizeof(struct sensor_axis_average));
 		

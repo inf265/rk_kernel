@@ -113,17 +113,34 @@
 		io-channels = <&adc 1>;
 
 		vol-up-key {
-			linux,code = <115>;
+			linux,code = <114>;
 			label = "volume up";
-			rockchip,adc_value = <523>;
+			rockchip,adc_value = <59>;
 		};
 
 		vol-down-key {
-			linux,code = <114>;
+			linux,code = <115>;
 			label = "volume down";
-			rockchip,adc_value = <727>;
+			rockchip,adc_value = <500>;
 		};
-
+		
+		
+		led-key {
+			gpios = <&gpio0 GPIO_B4 GPIO_ACTIVE_LOW>;
+			linux,code = <147>;
+			label = "led";
+			gpio-key,wakeup;
+		};
+		
+				
+		menu-key {
+			gpios = <&gpio0 GPIO_B0 GPIO_ACTIVE_HIGH>;
+			linux,code = <140>;
+			label = "menu";
+			gpio-key,wakeup;
+		};
+		
+		
 		power-key {
 			gpios = <&gpio0 GPIO_A5 GPIO_ACTIVE_LOW>;
 			linux,code = <116>;
@@ -131,35 +148,29 @@
 			gpio-key,wakeup;
 		};
 
-		menu-key {
-			linux,code = <59>;
-			label = "menu";
-			rockchip,adc_value = <1>;
-		};
-
-		home-key {
-			linux,code = <102>;
-			label = "home";
-			rockchip,adc_value = <318>;
-		};
 
 		back-key {
+			gpios = <&gpio0 GPIO_B1 GPIO_ACTIVE_LOW>;
 			linux,code = <158>;
 			label = "back";
-			rockchip,adc_value = <146>;
+			gpio-key,wakeup;
 		};
 
-		camera-key {
-			linux,code = <212>;
-			label = "camera";
-			rockchip,adc_value = <450>;
-		};
 	};
 };
 
 
 &i2c0 {
 	status = "okay";
+	
+	
+		rk816: rk816@1a {
+		reg = <0x1a>;
+		status = "okay";
+	};
+	
+	
+	
 	rk818: rk818@1c {
 		reg = <0x1c>;
 		status = "okay";
@@ -181,25 +192,35 @@
 };
 
 &i2c1 {
-	status = "okay";
+	status = "disabled";
 
-	rk816: rk816@1a {
-		reg = <0x1a>;
-		status = "okay";
-	};
+
 };
 
 &i2c2 {
 	status = "okay";
-	ts@55 {
-		compatible = "goodix,gt8xx";
-		reg = <0x55>;
-		touch-gpio = <&gpio1 GPIO_B0 IRQ_TYPE_LEVEL_LOW>;
-		reset-gpio = <&gpio2 GPIO_C1 GPIO_ACTIVE_LOW>;
+
+	ts@1a {
+		compatible = "HYN,CST2XX";
+		reg = <0x1a>;
+		irq-gpio = <&gpio1 GPIO_B0 IRQ_TYPE_LEVEL_HIGH>;
+		wake-gpio = <&gpio0 GPIO_D1 GPIO_ACTIVE_HIGH>;
 		//power-gpio = <&gpio0 GPIO_C5 GPIO_ACTIVE_LOW>;
-		max-x = <1280>;
-		max-y = <800>;
 	};
+	
+	
+		sensor@15 {
+		compatible = "gs_mxc6225";
+		reg = <0x15>;
+		type = <SENSOR_TYPE_ACCEL>;
+		irq-gpio = <&gpio1 GPIO_B2 IRQ_TYPE_LEVEL_LOW>;
+		irq_enable = <0>;
+		poll_delay_ms = <30>;
+		layout = <2>;
+	};
+	
+	
+	
 	/*
 	ts@01 {
 		compatible = "ct,vtl_ts";
@@ -211,6 +232,22 @@
 	};
 	*/
 };
+
+
+&i2c3 {
+	status = "okay";
+	
+	
+	 sn3106b@54 {
+	 	compatible = "sn3106b";
+		reg = <0x54>;
+		status = "okay";
+	};
+	
+
+};
+
+
 
 &fb {
 	rockchip,disp-mode = <ONE_DUAL>;
@@ -312,10 +349,6 @@
 				regulator-boot-on;
 			};
 
-	rt5025-irq {
-				compatible = "rt,rt5025-irq";
-				rt,irq-gpio = <&gpio1 GPIO_B1 GPIO_ACTIVE_HIGH>;
-	};
 };
 
 /include/ "rt5036.dtsi"
@@ -425,10 +458,7 @@
 				rt,standby_enabled;
 			};
 
-			rt5036-irq {
-				compatible = "rt,rt5036-irq";
-				rt,irq-gpio = <&gpio1 GPIO_B1 GPIO_ACTIVE_HIGH>;
-			};
+
 
 			rt5036-charger {
 				compatible = "rt,rt5036-charger";
@@ -450,7 +480,7 @@
 
 /include/ "rk818.dtsi"
 &rk818 {
-	gpios =<&gpio1 GPIO_B1 GPIO_ACTIVE_HIGH>,<&gpio1 GPIO_A1 GPIO_ACTIVE_LOW>;
+	gpios =<&gpio3 GPIO_C6 GPIO_ACTIVE_HIGH>,<&gpio1 GPIO_A1 GPIO_ACTIVE_LOW>;
 	rk818,system-power-controller;
 	rk818,support_dc_chg = <1>;/*1: dc chg; 0:usb chg*/
 
@@ -639,9 +669,9 @@
 
 /include/ "rk816.dtsi"
 &rk816 {
-	gpios = <&gpio1 GPIO_A5 GPIO_ACTIVE_HIGH>, <&gpio1 GPIO_A1 GPIO_ACTIVE_LOW>;
+	gpios = <&gpio1 GPIO_B1 GPIO_ACTIVE_HIGH>, <&gpio3 GPIO_C1 GPIO_ACTIVE_LOW>;
 	rk816,system-power-controller;
-	rk816,support_dc_chg = <1>;/*1: dc chg; 0:usb chg*/
+	rk816,support_dc_chg = <0>;/*1: dc chg; 0:usb chg*/
 	io-channels = <&adc 0>;
 	gpio-controller;
 	#gpio-cells = <2>;
@@ -656,7 +686,7 @@
 			regulator-always-on;
 			regulator-state-mem {
 				regulator-state-mode = <0x2>;
-				regulator-state-disabled;
+				regulator-state-enabled;
 				regulator-state-uv = <900000>;
 			};
 		};

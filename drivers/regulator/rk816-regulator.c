@@ -22,8 +22,6 @@
 #include <linux/of_device.h>
 #include <linux/of_gpio.h>
 #include <linux/mfd/rk816.h>
-#include <linux/regulator/driver.h>
-#include <linux/regulator/of_regulator.h>
 
 /* Field Definitions */
 #define RK816_BUCK_VSEL_MASK	0x3f
@@ -31,14 +29,14 @@
 #define RK816_BUCK5_VSEL_MASK	0x7
 #define RK816_LDO_VSEL_MASK	0x1f
 
+#define RK816_SLP_REG_OFFSET	1
+
 static int buck_set_vol_base_addr[] = {
 	RK816_BUCK1_ON_VSEL_REG,
 	RK816_BUCK2_ON_VSEL_REG,
 	RK816_BUCK3_CONFIG_REG,
 	RK816_BUCK4_ON_VSEL_REG,
-	RK816_BUCK5_ON_VSEL_REG,
 };
-#define rk816_BUCK_SET_VOL_REG(x) (buck_set_vol_base_addr[x])
 
 static int ldo_voltage_map[] = {
 	800000, 900000, 1000000, 1100000, 1200000, 1300000, 1400000, 1500000,
@@ -47,8 +45,7 @@ static int ldo_voltage_map[] = {
 	3200000, 3300000, 3400000,
 };
 
-/* Offset from XXX_ON_VSEL to XXX_SLP_VSEL */
-#define RK816_SLP_REG_OFFSET 1
+static struct rk8xx_regulator_data *rk8xx_reg;
 
 static int rk816_ldo_list_voltage(struct regulator_dev *dev, unsigned index)
 {
@@ -65,23 +62,21 @@ static int rk816_ldo_list_voltage(struct regulator_dev *dev, unsigned index)
 static int rk816_is_enabled(struct regulator_dev *dev)
 {
 	struct rk816 *rk816 = rdev_get_drvdata(dev);
-	u16 val;
+	int val;
 
 	val = rk816_reg_read(rk816, (u8)(dev->desc->enable_reg));
 	if (val < 0)
 		return val;
 
-	if (val & dev->desc->enable_mask)
-		return 1;
-	else
-		return 0;
+	return (val & dev->desc->enable_mask) ? 1 : 0;
 }
 
 static int rk816_enable(struct regulator_dev *dev)
 {
 	struct rk816 *rk816 = rdev_get_drvdata(dev);
-	u16 enable_val, enable_mask;
+	u8 enable_val, enable_mask;
 
+	/* write mask */
 	enable_mask = dev->desc->enable_mask | (dev->desc->enable_mask << 4);
 	enable_val = dev->desc->enable_mask | (dev->desc->enable_mask << 4);
 
@@ -92,8 +87,9 @@ static int rk816_enable(struct regulator_dev *dev)
 static int rk816_disable(struct regulator_dev *dev)
 {
 	struct rk816 *rk816 = rdev_get_drvdata(dev);
-	u16 enable_val, enable_mask;
+	u8 enable_val, enable_mask;
 
+	/* write mask */
 	enable_mask = dev->desc->enable_mask | (dev->desc->enable_mask << 4);
 	enable_val = dev->desc->enable_mask << 4;
 
@@ -104,33 +100,35 @@ static int rk816_disable(struct regulator_dev *dev)
 static int rk816_ldo_suspend_enable(struct regulator_dev *dev)
 {
 	struct rk816 *rk816 = rdev_get_drvdata(dev);
-	int ldo = rdev_get_id(dev) - RK816_LDO1;
-	u16 enable_val, enable_mask;
+	int ldo = rdev_get_id(dev) - rk8xx_reg->ldo1_id;
+	u8 enable_val, enable_mask;
 
+	/* without write mask */
 	enable_mask = (1 << ldo);
 	enable_val = (1 << ldo);
 
-	return rk816_set_bits(rk816, RK816_SLP_LDO_EN_REG,
+	return rk816_set_bits(rk816, rk8xx_reg->slp_ldo_en_reg,
 			      enable_mask, enable_val);
 }
 
 static int rk816_ldo_suspend_disable(struct regulator_dev *dev)
 {
 	struct rk816 *rk816 = rdev_get_drvdata(dev);
-	int ldo = rdev_get_id(dev) - RK816_LDO1;
-	u16 enable_val, enable_mask;
+	int ldo = rdev_get_id(dev) - rk8xx_reg->ldo1_id;
+	u8 enable_val, enable_mask;
 
+	/* without write mask */
 	enable_mask = (1 << ldo);
 	enable_val = (0 << ldo);
 
-	return rk816_set_bits(rk816, RK816_SLP_LDO_EN_REG,
+	return rk816_set_bits(rk816, rk8xx_reg->slp_ldo_en_reg,
 			      enable_mask, enable_val);
 }
 
 static int rk816_ldo_select_min_voltage(struct regulator_dev *dev,
 					int min_uV, int max_uV)
 {
-	u16 vsel = 0;
+	int vsel = 0;
 
 	if (min_uV < 800000)
 		vsel = 0;
@@ -148,26 +146,28 @@ static int rk816_ldo_select_min_voltage(struct regulator_dev *dev,
 static int rk816_ldo_get_voltage(struct regulator_dev *dev)
 {
 	struct rk816 *rk816 = rdev_get_drvdata(dev);
-	u16 reg = 0;
-	int val;
+	int reg;
 
 	reg = rk816_reg_read(rk816, (u8)dev->desc->vsel_reg);
-	reg &= dev->desc->vsel_mask;
-	val = ldo_voltage_map[reg];
+	if (reg < 0)
+		return reg;
 
-	return val;
+	reg &= dev->desc->vsel_mask;
+
+	return ldo_voltage_map[reg];
 }
 
 static int rk816_ldo_set_sleep_voltage(struct regulator_dev *dev, int uV)
 {
 	struct rk816 *rk816 = rdev_get_drvdata(dev);
-	u16 val;
-	int ret = 0;
+	int val, ret;
 
 	val = rk816_ldo_select_min_voltage(dev, uV, uV);
+	if (val < 0)
+		return val;
+
 	ret = rk816_set_bits(rk816, dev->desc->vsel_reg + RK816_SLP_REG_OFFSET,
 			     dev->desc->vsel_mask, val);
-
 	return ret;
 }
 
@@ -175,20 +175,21 @@ static int rk816_ldo_set_voltage(struct regulator_dev *dev,
 				 int min_uV, int max_uV, unsigned *selector)
 {
 	struct rk816 *rk816 = rdev_get_drvdata(dev);
-	u16 val;
-	int ret = 0;
+	int val, ret;
 
 	val = rk816_ldo_select_min_voltage(dev, min_uV, min_uV);
+	if (val < 0)
+		return val;
+
 	ret = rk816_set_bits(rk816, dev->desc->vsel_reg,
 			     dev->desc->vsel_mask, val);
-
 	return ret;
 }
 
 static int rk816_dcdc_list_voltage(struct regulator_dev *dev, unsigned selector)
 {
 	int volt;
-	int buck = rdev_get_id(dev) - RK816_DCDC1;
+	int buck = rdev_get_id(dev) - rk8xx_reg->dcdc1_id;
 
 	switch (buck) {
 	case 0:
@@ -213,52 +214,55 @@ static int rk816_dcdc_list_voltage(struct regulator_dev *dev, unsigned selector)
 		return -EINVAL;
 	}
 
-	return  volt;
+	return volt;
 }
 
 static int rk816_dcdc_suspend_enable(struct regulator_dev *dev)
 {
 	struct rk816 *rk816 = rdev_get_drvdata(dev);
-	int dcdc = rdev_get_id(dev) - RK816_DCDC1;
-	u16 enable_val, enable_mask;
+	int dcdc = rdev_get_id(dev) - rk8xx_reg->dcdc1_id;
+	u8 enable_val, enable_mask;
 
+	/* without write mask */
 	enable_mask = (1 << dcdc);
 	enable_val = (1 << dcdc);
 
-	return rk816_set_bits(rk816, RK816_SLP_DCDC_EN_REG,
+	return rk816_set_bits(rk816, rk8xx_reg->slp_dcdc_en_reg,
 			      enable_mask, enable_val);
 }
 
 static int rk816_dcdc_suspend_disable(struct regulator_dev *dev)
 {
 	struct rk816 *rk816 = rdev_get_drvdata(dev);
-	int dcdc = rdev_get_id(dev) - RK816_DCDC1;
-	u16 enable_val, enable_mask;
+	int dcdc = rdev_get_id(dev) - rk8xx_reg->dcdc1_id;
+	u8 enable_val, enable_mask;
 
+	/* without write mask */
 	enable_mask = (1 << dcdc);
 	enable_val = (0 << dcdc);
 
-	return rk816_set_bits(rk816, RK816_SLP_DCDC_EN_REG,
+	return rk816_set_bits(rk816, rk8xx_reg->slp_dcdc_en_reg,
 			      enable_mask, enable_val);
 }
 
 static int rk816_dcdc_get_voltage(struct regulator_dev *dev)
 {
 	struct rk816 *rk816 = rdev_get_drvdata(dev);
-	u16 reg = 0;
-	int val;
+	int reg;
 
 	reg = rk816_reg_read(rk816, (u8)dev->desc->vsel_reg);
-	reg &= dev->desc->vsel_mask;
-	val = rk816_dcdc_list_voltage(dev, reg);
+	if (reg < 0)
+		return reg;
 
-	return val;
+	reg &= dev->desc->vsel_mask;
+
+	return rk816_dcdc_list_voltage(dev, reg);
 }
 
 static int rk816_dcdc_select_min_voltage(struct regulator_dev *dev,
 					 int min_uV, int max_uV, int buck)
 {
-	u16 vsel = 0;
+	int vsel = 0;
 
 	if (buck == 0 || buck == 1) {
 		if (min_uV < 712500)
@@ -292,14 +296,16 @@ static int rk816_dcdc_set_voltage(struct regulator_dev *dev,
 				  int min_uV, int max_uV, unsigned *selector)
 {
 	struct rk816 *rk816 = rdev_get_drvdata(dev);
-	int buck = rdev_get_id(dev) - RK816_DCDC1;
-	u16 val;
-	int ret = 0;
+	int buck = rdev_get_id(dev) - rk8xx_reg->dcdc1_id;
+	int val, ret = 0;
 
 	if (buck == 2) {
 		return 0;
 	} else {
 		val = rk816_dcdc_select_min_voltage(dev, min_uV, max_uV, buck);
+		if (val < 0)
+			return val;
+
 		ret = rk816_set_bits(rk816, dev->desc->vsel_reg,
 				     dev->desc->vsel_mask, val);
 	}
@@ -314,14 +320,16 @@ static int rk816_dcdc_set_voltage(struct regulator_dev *dev,
 static int rk816_dcdc_set_sleep_voltage(struct regulator_dev *dev, int uV)
 {
 	struct rk816 *rk816 = rdev_get_drvdata(dev);
-	int buck = rdev_get_id(dev) - RK816_DCDC1;
-	u16 val;
-	int ret = 0;
+	int buck = rdev_get_id(dev) - rk8xx_reg->dcdc1_id;
+	int val, ret = 0;
 
 	if (buck == 2) {
 		return 0;
 	} else {
 		val = rk816_dcdc_select_min_voltage(dev, uV, uV, buck);
+		if (val < 0)
+			return val;
+
 		ret = rk816_set_bits(rk816,
 				     dev->desc->vsel_reg + RK816_SLP_REG_OFFSET,
 				     dev->desc->vsel_mask, val);
@@ -333,11 +341,11 @@ static int rk816_dcdc_set_sleep_voltage(struct regulator_dev *dev, int uV)
 static unsigned int rk816_dcdc_get_mode(struct regulator_dev *dev)
 {
 	struct rk816 *rk816 = rdev_get_drvdata(dev);
-	int buck = rdev_get_id(dev) - RK816_DCDC1;
-	u16 mask = 0x80;
-	u16 val;
+	int buck = rdev_get_id(dev) - rk8xx_reg->dcdc1_id;
+	u8 mask = BIT(7);
+	int val;
 
-	val = rk816_reg_read(rk816, rk816_BUCK_SET_VOL_REG(buck));
+	val = rk816_reg_read(rk816, buck_set_vol_base_addr[buck]);
 	if (val < 0)
 		return val;
 
@@ -350,15 +358,15 @@ static unsigned int rk816_dcdc_get_mode(struct regulator_dev *dev)
 static int rk816_dcdc_set_mode(struct regulator_dev *dev, unsigned int mode)
 {
 	struct rk816 *rk816 = rdev_get_drvdata(dev);
-	int buck = rdev_get_id(dev) - RK816_DCDC1;
-	u16 mask = 0x80;
+	int buck = rdev_get_id(dev) - rk8xx_reg->dcdc1_id;
+	u8 mask = BIT(7);
 
 	switch (mode) {
 	case REGULATOR_MODE_FAST:
-		return rk816_set_bits(rk816, rk816_BUCK_SET_VOL_REG(buck),
+		return rk816_set_bits(rk816, buck_set_vol_base_addr[buck],
 				      mask, mask);
 	case REGULATOR_MODE_NORMAL:
-		return rk816_set_bits(rk816, rk816_BUCK_SET_VOL_REG(buck),
+		return rk816_set_bits(rk816, buck_set_vol_base_addr[buck],
 				      mask, 0);
 	default:
 		pr_err("error:pmu_rk816 only powersave and pwm mode\n");
@@ -370,20 +378,20 @@ static int rk816_dcdc_set_suspend_mode(struct regulator_dev *dev,
 				       unsigned int mode)
 {
 	struct rk816 *rk816 = rdev_get_drvdata(dev);
-	int buck = rdev_get_id(dev) - RK816_DCDC1;
-	u16 mask = 0x80;
+	int buck = rdev_get_id(dev) - rk8xx_reg->dcdc1_id;
+	u8 mask = BIT(7);
 	int ret;
 
 	switch (mode) {
 	case REGULATOR_MODE_FAST:
 		ret = rk816_set_bits(rk816,
-				     (rk816_BUCK_SET_VOL_REG(buck) +
+				     (buck_set_vol_base_addr[buck] +
 				     RK816_SLP_REG_OFFSET),
 				     mask, mask);
 		break;
 	case REGULATOR_MODE_NORMAL:
 		ret = rk816_set_bits(rk816,
-				     (rk816_BUCK_SET_VOL_REG(buck) +
+				     (buck_set_vol_base_addr[buck] +
 				     RK816_SLP_REG_OFFSET),
 				     mask, 0);
 		break;
@@ -441,7 +449,7 @@ static struct regulator_ops rk816_dcdc_ops = {
 	.set_voltage_time_sel = rk816_dcdc_set_voltage_time_sel,
 };
 
-static const struct regulator_desc rk816_reg[] = {
+static const struct regulator_desc rk816_reg_desc[] = {
 	{
 		.name = "RK816_DCDC1",
 		.supply_name = "vcc1",
@@ -582,6 +590,125 @@ static struct of_regulator_match rk816_reg_matches[] = {
 	[RK816_ID_LDO6]		= { .name = "RK816_LDO6" },
 };
 
+static const struct regulator_desc rk805_reg_desc[] = {
+	{
+		.name = "RK805_DCDC1",
+		.supply_name = "vcc1",
+		.id = RK805_ID_DCDC1,
+		.ops = &rk816_dcdc_ops,
+		.type = REGULATOR_VOLTAGE,
+		.n_voltages = 64,
+		.vsel_reg = RK805_BUCK1_ON_VSEL_REG,
+		.vsel_mask = RK816_BUCK_VSEL_MASK,
+		.enable_reg = RK805_DCDC_EN_REG,
+		.enable_mask = BIT(0),
+		.owner = THIS_MODULE,
+	}, {
+		.name = "RK805_DCDC2",
+		.supply_name = "vcc2",
+		.id = RK805_ID_DCDC2,
+		.ops = &rk816_dcdc_ops,
+		.type = REGULATOR_VOLTAGE,
+		.n_voltages = 64,
+		.vsel_reg = RK805_BUCK2_ON_VSEL_REG,
+		.vsel_mask = RK816_BUCK_VSEL_MASK,
+		.enable_reg = RK805_DCDC_EN_REG,
+		.enable_mask = BIT(1),
+		.owner = THIS_MODULE,
+	}, {
+		.name = "RK805_DCDC3",
+		.supply_name = "vcc3",
+		.id = RK805_ID_DCDC3,
+		.ops = &rk816_dcdc_ops,
+		.type = REGULATOR_VOLTAGE,
+		.n_voltages = 1,
+		.enable_reg = RK805_DCDC_EN_REG,
+		.enable_mask = BIT(2),
+		.owner = THIS_MODULE,
+	}, {
+		.name = "RK805_DCDC4",
+		.supply_name = "vcc4",
+		.id = RK805_ID_DCDC4,
+		.ops = &rk816_dcdc_ops,
+		.type = REGULATOR_VOLTAGE,
+		.n_voltages = 32,
+		.vsel_reg = RK805_BUCK4_ON_VSEL_REG,
+		.vsel_mask = RK816_BUCK4_VSEL_MASK,
+		.enable_reg = RK805_DCDC_EN_REG,
+		.enable_mask = BIT(3),
+		.owner = THIS_MODULE,
+	}, {
+		.name = "RK805_LDO1",
+		.supply_name = "vcc5",
+		.id = RK805_ID_LDO1,
+		.ops = &rk816_ldo_ops,
+		.type = REGULATOR_VOLTAGE,
+		.n_voltages = ARRAY_SIZE(ldo_voltage_map),
+		.vsel_reg = RK805_LDO1_ON_VSEL_REG,
+		.vsel_mask = RK816_LDO_VSEL_MASK,
+		.enable_reg = RK805_LDO_EN_REG,
+		.enable_mask = BIT(0),
+		.enable_time = 400,
+		.owner = THIS_MODULE,
+	}, {
+		.name = "RK805_LDO2",
+		.supply_name = "vcc6",
+		.id = RK805_ID_LDO2,
+		.ops = &rk816_ldo_ops,
+		.type = REGULATOR_VOLTAGE,
+		.n_voltages = ARRAY_SIZE(ldo_voltage_map),
+		.vsel_reg = RK805_LDO2_ON_VSEL_REG,
+		.vsel_mask = RK816_LDO_VSEL_MASK,
+		.enable_reg = RK805_LDO_EN_REG,
+		.enable_mask = BIT(1),
+		.enable_time = 400,
+		.owner = THIS_MODULE,
+	}, {
+		.name = "RK805_LDO3",
+		.supply_name = "vcc7",
+		.id = RK805_ID_LDO3,
+		.ops = &rk816_ldo_ops,
+		.type = REGULATOR_VOLTAGE,
+		.n_voltages = ARRAY_SIZE(ldo_voltage_map),
+		.vsel_reg = RK805_LDO3_ON_VSEL_REG,
+		.vsel_mask = RK816_LDO_VSEL_MASK,
+		.enable_reg = RK805_LDO_EN_REG,
+		.enable_mask = BIT(2),
+		.enable_time = 400,
+		.owner = THIS_MODULE,
+	}
+};
+
+static struct of_regulator_match rk805_reg_matches[] = {
+	[RK805_ID_DCDC1] = { .name = "RK805_DCDC1" },
+	[RK805_ID_DCDC2] = { .name = "RK805_DCDC2" },
+	[RK805_ID_DCDC3] = { .name = "RK805_DCDC3" },
+	[RK805_ID_DCDC4] = { .name = "RK805_DCDC4" },
+	[RK805_ID_LDO1]	 = { .name = "RK805_LDO1" },
+	[RK805_ID_LDO2]	 = { .name = "RK805_LDO2" },
+	[RK805_ID_LDO3]	 = { .name = "RK805_LDO3" },
+};
+
+static struct rk8xx_regulator_data rk816_regulators = {
+	.dcdc1_id = RK816_ID_DCDC1,
+	.ldo1_id = RK816_ID_LDO1,
+	.slp_ldo_en_reg = RK816_SLP_LDO_EN_REG,
+	.slp_dcdc_en_reg = RK816_SLP_DCDC_EN_REG,
+	.num_regulators = RK816_NUM_REGULATORS,
+	.reg_desc = rk816_reg_desc,
+	.reg_matches = rk816_reg_matches
+};
+
+static struct rk8xx_regulator_data rk805_regulators = {
+	.dcdc1_id = RK805_ID_DCDC1,
+	.ldo1_id = RK805_ID_LDO1,
+	.slp_ldo_en_reg = RK805_SLP_LDO_EN_REG,
+	.slp_dcdc_en_reg = RK805_SLP_DCDC_EN_REG,
+	.num_regulators = RK805_NUM_REGULATORS,
+	.reg_desc = rk805_reg_desc,
+	.reg_matches = rk805_reg_matches
+};
+
 int rk816_regulator_dt_parse_pdata(struct device *dev,
 				   struct device *client_dev)
 {
@@ -592,8 +719,8 @@ int rk816_regulator_dt_parse_pdata(struct device *dev,
 	if (!np)
 		return -ENXIO;
 
-	ret = of_regulator_match(dev, np, rk816_reg_matches,
-				 RK816_NUM_REGULATORS);
+	ret = of_regulator_match(dev, np, rk8xx_reg->reg_matches,
+				 rk8xx_reg->num_regulators);
 	if (ret < 0)
 		goto dt_parse_end;
 
@@ -605,33 +732,51 @@ dt_parse_end:
 static int rk816_regulator_probe(struct platform_device *pdev)
 {
 	struct rk816 *rk816 = dev_get_drvdata(pdev->dev.parent);
+	struct rk8xx_platform_data *pdata = pdev->dev.platform_data;
 	struct i2c_client *client = rk816->i2c;
 	struct regulator_config config = {};
 	struct regulator_dev *rk816_rdev;
 	int ret, i;
+
+	if (!pdata || !pdata->chip_name) {
+		dev_err(&pdev->dev, "invalid platform data\n");
+		return -EINVAL;
+	}
+
+	if (!strcmp(pdata->chip_name, "rk816")) {
+		rk8xx_reg = &rk816_regulators;
+	} else if (!strcmp(pdata->chip_name, "rk805")) {
+		rk8xx_reg = &rk805_regulators;
+	} else {
+		dev_err(&pdev->dev, "failed to match device data\n");
+		return -EINVAL;
+	}
+
+	pr_info("%s: compatible %s\n", __func__, pdata->chip_name);
 
 	ret = rk816_regulator_dt_parse_pdata(&pdev->dev, &client->dev);
 	if (ret < 0)
 		return ret;
 
 	/* Instantiate the regulators */
-	rk816->rdev = devm_kcalloc(&pdev->dev, RK816_NUM_REGULATORS,
+	rk816->rdev = devm_kcalloc(&pdev->dev, rk8xx_reg->num_regulators,
 				   sizeof(struct regulator_dev *), GFP_KERNEL);
 	if (!rk816->rdev)
 		return -ENOMEM;
 
-	for (i = 0; i < RK816_NUM_REGULATORS; i++) {
-		if (!rk816_reg_matches[i].init_data ||
-		    !rk816_reg_matches[i].of_node)
+	for (i = 0; i < rk8xx_reg->num_regulators; i++) {
+		if (!rk8xx_reg->reg_matches[i].init_data ||
+		    !rk8xx_reg->reg_matches[i].of_node)
 			continue;
 
 		config.dev = &client->dev;
 		config.driver_data = rk816;
 		config.regmap = rk816->regmap;
-		config.of_node = rk816_reg_matches[i].of_node;
-		config.init_data = rk816_reg_matches[i].init_data;
+		config.of_node = rk8xx_reg->reg_matches[i].of_node;
+		config.init_data = rk8xx_reg->reg_matches[i].init_data;
 
-		rk816_rdev = regulator_register(&rk816_reg[i], &config);
+		rk816_rdev = regulator_register(&rk8xx_reg->reg_desc[i],
+						&config);
 		if (IS_ERR(rk816_rdev)) {
 			dev_err(&client->dev,
 				"failed to register %d regulator\n", i);
@@ -655,7 +800,7 @@ static int rk816_regulator_remove(struct platform_device *pdev)
 	struct rk816 *rk816 = dev_get_drvdata(pdev->dev.parent);
 	int i;
 
-	for (i = 0; i < RK816_NUM_REGULATORS; i++)
+	for (i = 0; i < rk8xx_reg->num_regulators; i++)
 		if (rk816->rdev[i])
 			regulator_unregister(rk816->rdev[i]);
 	return 0;
@@ -665,8 +810,7 @@ static struct platform_driver rk816_regulator_driver = {
 	.probe = rk816_regulator_probe,
 	.remove = rk816_regulator_remove,
 	.driver = {
-		.name = "rk816-regulator",
-		.owner = THIS_MODULE,
+		.name = "rk8xx-regulator",
 	},
 };
 

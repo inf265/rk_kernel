@@ -17,6 +17,7 @@
 #include <linux/device.h>
 #include <linux/ctype.h>
 #include <linux/leds.h>
+#include <linux/delay.h>
 
 static ssize_t led_delay_on_show(struct device *dev,
 		struct device_attribute *attr, char *buf)
@@ -68,15 +69,15 @@ static ssize_t led_delay_off_store(struct device *dev,
 	return size;
 }
 
-static DEVICE_ATTR(delay_on, 0644, led_delay_on_show, led_delay_on_store);
-static DEVICE_ATTR(delay_off, 0644, led_delay_off_show, led_delay_off_store);
+static DEVICE_ATTR(delay_on, 0777, led_delay_on_show, led_delay_on_store);
+static DEVICE_ATTR(delay_off, 0777, led_delay_off_show, led_delay_off_store);
 
 static void timer_trig_activate(struct led_classdev *led_cdev)
 {
 	int rc;
 
 	led_cdev->trigger_data = NULL;
-
+	printk("phm------------timer_trig_activate--\n");
 	rc = device_create_file(led_cdev->dev, &dev_attr_delay_on);
 	if (rc)
 		return;
@@ -101,9 +102,10 @@ static void timer_trig_deactivate(struct led_classdev *led_cdev)
 		device_remove_file(led_cdev->dev, &dev_attr_delay_off);
 		led_cdev->activated = false;
 	}
-
+	
 	/* Stop blinking */
 	led_set_brightness(led_cdev, LED_OFF);
+	
 }
 
 static struct led_trigger timer_led_trigger = {

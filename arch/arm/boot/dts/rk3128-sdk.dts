@@ -3,7 +3,7 @@
 #include "rk3128.dtsi"
 #include "rk3128-cif-sensor.dtsi"
 #include "rk312x-sdk.dtsi"
-#include "lcd-b101ew05.dtsi"
+#include "lcd-b080xan03.0-mipi.dtsi"
 
 / {
 	 compatible = "rockchip,rk3128";
@@ -18,17 +18,86 @@
 	usb_control {
 		compatible = "rockchip,rk3126-usb-control";
 
-		host_drv_gpio = <&gpio3 GPIO_C4 GPIO_ACTIVE_LOW>;
-		otg_drv_gpio = <&gpio3 GPIO_C1 GPIO_ACTIVE_LOW>;
+		//host_drv_gpio = <&gpio3 GPIO_C4 GPIO_ACTIVE_LOW>;
+		//otg_drv_gpio = <&gpio3 GPIO_C1 GPIO_ACTIVE_LOW>;
 
 		rockchip,remote_wakeup;
 		rockchip,usb_irq_wakeup;
 	};
+	wireless-wlan {
+		compatible = "wlan-platdata";
+
+		/* wifi_chip_type - wifi chip define
+                 * ap6210, ap6330, ap6335
+                 * rtl8188eu, rtl8723bs, rtl8723bu
+                 * esp8089
+		*/
+		wifi_chip_type = "ap6181";
+		sdio_vref = <3300>; //1800mv or 3300mv
+
+		//	power_ctrl_by_pmu;
+		// 	pmu_regulator = "act_ldo3";
+		// 	pmu_enable_level = <1>; //1->HIGH, 0->LOW
+		/* WIFI_HOST_WAKE = GPIO3_C7 */
+		WIFI,host_wake_irq = <&gpio3 GPIO_C7 GPIO_ACTIVE_HIGH>;
+		/* WIFI_REG_ON 	= GPIO3_D3 */
+		WIFI,poweren_gpio  = <&gpio3 GPIO_D3 GPIO_ACTIVE_HIGH>;
+
+		status = "okay";
+	};
+	wireless-bluetooth {
+		compatible = "bluetooth-platdata";
+
+		//wifi-bt-power-toggle;
+
+		uart_rts_gpios = <&gpio0 GPIO_C1 GPIO_ACTIVE_LOW>;
+		pinctrl-names = "default","rts_gpio";
+		pinctrl-0 = <&uart0_rts>;
+		pinctrl-1 = <&uart0_rts_gpio>;
+
+
+		/* BT_HOST_WAKE = GPIO3_C6 */
+		/* BT_RST 		= GPIO3_C5 */
+		/* BT_WAKE 		= GPIO3_D2 */
+		//BT,power_gpio = <&gpio4 GPIO_D3 GPIO_ACTIVE_HIGH>;
+		BT,reset_gpio = <&gpio3 GPIO_C5 GPIO_ACTIVE_HIGH>;
+		BT,wake_gpio = <&gpio3 GPIO_D2 GPIO_ACTIVE_HIGH>;
+		BT,wake_host_irq = <&gpio3 GPIO_C6 GPIO_ACTIVE_LOW>;
+
+		status = "disabled";
+	};
+	
+		
+
+	rockchip_suspend: rockchip_suspend {
+                           rockchip,ctrbits = <
+                           (0
+                           |RKPM_CTR_PWR_DMNS
+                           |RKPM_CTR_GTCLKS
+                           |RKPM_CTR_PLLS
+                      //     |RKPM_CTR_ARMOFF_LPMD
+                    //     |RKPM_CTR_IDLESRAM_MD
+                           |RKPM_CTR_DDR
+                   //        |RKPM_CTR_VOLTS
+                           |RKPM_CTR_BUS_IDLE
+                   //        |RKPM_CTR_VOL_PWM1
+                           )
+                   >;
+          rockchip,pmic-suspend_gpios = <GPIO3_C1>;
+     };
+
 };
 
+&uart0{
+status = "okay";
+dma-names = "!tx", "!rx";
+pinctrl-0 = <&uart0_xfer>;
+};
+
+
 &fb {
-	rockchip,disp-mode = <ONE_DUAL>;
-	rockchip,uboot-logo-on = <1>;
+	rockchip,disp-mode = <NO_DUAL>;
+	rockchip,uboot-logo-on = <0>;
 };
 
 &rk_screen {
@@ -58,41 +127,41 @@
 			gpios = <&gpio0 GPIO_D0 GPIO_ACTIVE_HIGH>;
 			rockchip,delay = <10>;
 		};
+		lcd_en: lcd_en {
+			rockchip,power_type = <GPIO>;
+			gpios = <&gpio1 GPIO_B4 GPIO_ACTIVE_HIGH>;
+			rockchip,delay = <10>;
+		};	
 	};
 };
 
 &hdmi {
-        status = "okay";
+        status = "disabled";
 };
 
-&sdmmc {
-	cd-gpios = <&gpio1 GPIO_C1 GPIO_ACTIVE_HIGH>;/*CD GPIO*/
-};
-&key {
-		power-key {
-			gpios = <&gpio0 GPIO_A2 GPIO_ACTIVE_LOW>;
-			linux,code = <116>;
-			label = "power";
-			gpio-key,wakeup;
-		};
-};
 
 &dwc_control_usb {
 	usb_uart {
 		status = "ok";
 	};
 };
+
+&pinctrl {
+	init-gpios = <&gpio0 GPIO_B5 0>;
+};
+
+
 &codec {
-	spk_ctl_io = <&gpio1 GPIO_B3 GPIO_ACTIVE_HIGH>;
+	spk_ctl_io = <&gpio0 GPIO_D6 GPIO_ACTIVE_HIGH>;
         spk-mute-delay = <200>;
         hp-mute-delay = <100>;
         rk312x_for_mid = <1>;
-        is_rk3128 = <0>;
+        is_rk3128 = <1>;
         spk_volume = <25>;
         hp_volume = <25>;
         capture_volume = <26>;
-        gpio_debug = <1>;
-        codec_hp_det = <1>;
+        gpio_debug = <0>;
+        codec_hp_det = <0>;
 };
 
 &rk3128_cif_sensor{
@@ -108,10 +177,10 @@
 		600000 950000
 		696000 975000
 		816000 1050000
-		1008000 1175000
-		1200000 1300000
-		1296000 1350000
-		1320000 1375000
+		1008000 1250000
+		1200000 1250000
+	//	1296000 1350000
+	//	1320000 1375000
 		>;
 	virt-temp-limit-1-cpu-busy = <
 	/* target-temp	limit-freq */
@@ -122,7 +191,7 @@
 		>;
 	virt-temp-limit-2-cpu-busy = <
 	/* target-temp	limit-freq */
-		75	912000
+		75	816000
 		85	1008000
 		95	1104000
 		100	1200000
@@ -142,16 +211,16 @@
 		100	110400
 		>;
 	temp-limit-enable = <1>;
-	target-temp = <85>;
+	target-temp = <75>;
 	status="okay";
 };
 
 &clk_gpu_dvfs_table {
 	operating-points = <
 		/* KHz    uV */
-		200000 950000
-		300000 975000
-		400000 1075000
+		200000 1000000
+		300000 1125000
+		400000 1200000
 		//480000 1175000
 		>;
 	status="okay";
@@ -161,17 +230,17 @@
 	operating-points = <
 		/* KHz    uV */
 		//200000 950000
-		//300000 950000
-		400000 1000000
+		//360000 1100000
+		400000 1200000
 		//533000 1200000
 		>;
 
 	freq-table = <
 		/*status		freq(KHz)*/
 		SYS_STATUS_NORMAL	400000
-		SYS_STATUS_SUSPEND	400000
+		SYS_STATUS_SUSPEND	360000
 		SYS_STATUS_VIDEO_1080P  400000
-		SYS_STATUS_VIDEO_4K     400000
+		//SYS_STATUS_VIDEO_4K     400000
 		SYS_STATUS_PERFORMANCE  400000
 		SYS_STATUS_DUALVIEW	400000
 		SYS_STATUS_BOOST	400000

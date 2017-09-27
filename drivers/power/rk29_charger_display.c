@@ -20,13 +20,13 @@
 #define DBG(x...)
 #endif
 
-static int pwr_on_thrsd = 5;          //power on capcity threshold
+static int pwr_on_thrsd = 1;          //power on capcity threshold
 
 static int __init pwr_on_thrsd_setup(char *str)
 {
 
 	pwr_on_thrsd = simple_strtol(str,NULL,10);
-	printk(KERN_INFO "power on threshold:%d",pwr_on_thrsd);
+	DBG("power on threshold:%d",pwr_on_thrsd);
 	return 0;
 }
 
@@ -87,15 +87,18 @@ int rk_get_system_battery_capacity(void)
 EXPORT_SYMBOL(rk_get_system_battery_capacity);
 
 #ifdef CONFIG_CHARGER_DISPLAY
-static void add_bootmode_charger_to_cmdline(void)
+static void add_bootmode_charger_to_cmdline(bool charger)
 {
-	char *pmode=" androidboot.mode=charger";
+	char *pmode=" androidboot.start=charger";
 	char *new_command_line = kzalloc(strlen(saved_command_line) + strlen(pmode) + 1, GFP_KERNEL);
 
-	sprintf(new_command_line, "%s%s", saved_command_line, pmode);
+	if(charger)
+		sprintf(new_command_line, "%s%s", saved_command_line, pmode);
+	else
+		sprintf(new_command_line, "%s%s", saved_command_line, " androidboot.start=no");
 	saved_command_line = new_command_line;
 
-	printk("Kernel command line: %s\n", saved_command_line);
+	DBG("Kernel command line: %s\n", saved_command_line);
 }
 
 static int  __init start_charge_logo_display(void)
@@ -103,17 +106,18 @@ static int  __init start_charge_logo_display(void)
 	union power_supply_propval val_status = {POWER_SUPPLY_STATUS_DISCHARGING};
 	union power_supply_propval val_capacity ={ 100} ;
 
-	printk("start_charge_logo_display\n");
+	DBG("start_charge_logo_display\n");
 
 	if(rockchip_boot_mode() == BOOT_MODE_RECOVERY)  //recovery mode
 	{
-		printk("recovery mode \n");
+		DBG("recovery mode \n");
 		return 0;
 	}
 	if (rk_get_system_battery_status() != POWER_SUPPLY_TYPE_BATTERY)
 		val_status.intval = POWER_SUPPLY_STATUS_CHARGING;
 
 	val_capacity.intval = rk_get_system_battery_capacity();
+	
 	// low power   and  discharging
 #if 0
 	if((val_capacity.intval < pwr_on_thrsd )&&(val_status.intval != POWER_SUPPLY_STATUS_CHARGING))
@@ -125,15 +129,15 @@ static int  __init start_charge_logo_display(void)
 	}
 #endif
 
-	if(val_status.intval == POWER_SUPPLY_STATUS_CHARGING)
-	{
-		if (((rockchip_boot_mode() == BOOT_MODE_NORMAL) || (rockchip_boot_mode() == BOOT_MODE_CHARGE)) || (val_capacity.intval <= pwr_on_thrsd))
-	    {			
-			add_bootmode_charger_to_cmdline();
-			printk("power in charge mode %d %d  %d\n\n",rockchip_boot_mode(),val_capacity.intval,pwr_on_thrsd);
+	if(val_status.intval == POWER_SUPPLY_STATUS_CHARGING){
+		if (((rockchip_boot_mode() == BOOT_MODE_NORMAL) ||(rockchip_boot_mode() == BOOT_MODE_CHARGE)) || (val_capacity.intval <= pwr_on_thrsd)) {			
+			add_bootmode_charger_to_cmdline(1);
+			DBG("power in charge mode %d %d  %d\n\n",rockchip_boot_mode(),val_capacity.intval,pwr_on_thrsd);
+			return 0;
 	   }
 	}
 
+	add_bootmode_charger_to_cmdline(0);
 	return 0;
 } 
 

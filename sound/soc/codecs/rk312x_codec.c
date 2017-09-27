@@ -2364,7 +2364,7 @@ static int rk312x_probe(struct snd_soc_codec *codec)
 	INIT_DELAYED_WORK(&rk312x_priv->init_delayed_work, rk312x_delay_workq);
 	INIT_DELAYED_WORK(&rk312x_priv->hpdet_work, hpdet_work_func);
 
-	schedule_delayed_work(&rk312x_priv->init_delayed_work, msecs_to_jiffies(3000));
+	schedule_delayed_work(&rk312x_priv->init_delayed_work, msecs_to_jiffies(500));
 	if (rk312x_codec->gpio_debug) {
 		gpio_kobj = kobject_create_and_add("codec-spk-ctl", NULL);
 

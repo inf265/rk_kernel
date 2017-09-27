@@ -9,83 +9,28 @@
 			CONFIG_SENSOR_FLASH_IOCTL_USR	  	= <0>;
 			CONFIG_SENSOR_AF_IOCTL_USR	   		= <0>;
 
-		ov2659{
+		s5k4ec{
 			is_front = <1>;
-			rockchip,powerdown = <&gpio3 GPIO_D7 GPIO_ACTIVE_HIGH>;
-			pwdn_active = <ov2659_PWRDN_ACTIVE>;
+			rockchip,powerdown = <&gpio3 GPIO_D7 GPIO_ACTIVE_LOW>;
+			pwdn_active = <0x00>;
 			#rockchip,power = <>;
-			pwr_active = <PWR_ACTIVE_HIGH>;
+			pwr_active = <PWR_ACTIVE_LOW>;
 			#rockchip,reset = <>;
 			#rst_active = <>;
 			#rockchip,flash = <>;
 			#rockchip,af = <>;
 			mir = <0>;
 			flash_attach = <0>;
-			resolution = <ov2659_FULL_RESOLUTION>;
-			powerup_sequence = <ov2659_PWRSEQ>;
+			resolution = <s5k4ec_FULL_RESOLUTION>;
+			powerup_sequence = <s5k4ec_PWRSEQ>;
 			orientation = <0>;
-			i2c_add = <ov2659_I2C_ADDR>;
-			i2c_rata = <100000>;
-			i2c_chl = <0>;
-			cif_chl = <0>;
-			mclk_rate = <24>;
-		};
-		gc0329{
-			is_front = <1>;
-			rockchip,powerdown = <&gpio3 GPIO_D7 GPIO_ACTIVE_HIGH>;
-			pwdn_active = <gc0329_PWRDN_ACTIVE>;
-			#rockchip,power = <>;
-			pwr_active = <PWR_ACTIVE_HIGH>;
-			#rockchip,reset = <>;
-			#rst_active = <>;
-			#rockchip,flash = <>;
-			#rockchip,af = <>;
-			mir = <0>;
-			flash_attach = <0>;
-			resolution = <gc0329_FULL_RESOLUTION>;
-			powerup_sequence = <gc0329_PWRSEQ>;
-			orientation = <0>;
-			i2c_add = <gc0329_I2C_ADDR>;
-			i2c_rata = <100000>;
-			i2c_chl = <0>;
-			cif_chl = <0>;
-			mclk_rate = <24>;
-		};
-
-     gc2035{
-            is_front = <0>;
-            rockchip,power = <&gpio2 GPIO_B2 GPIO_ACTIVE_HIGH>;
-            rockchip,powerdown = <&gpio3 GPIO_B3 GPIO_ACTIVE_HIGH>;
-            pwdn_active = <gc2035_PWRDN_ACTIVE>;
-            pwr_active = <PWR_ACTIVE_HIGH>;
-            mir = <0>;
-            flash_attach = <0>;
-            resolution = <gc2035_FULL_RESOLUTION>;
-            powerup_sequence = <gc2035_PWRSEQ>;
-            orientation = <180>;
-            i2c_add = <gc2035_I2C_ADDR>;
-            i2c_rata = <100000>;
-            i2c_chl = <2>;
-            cif_chl = <0>;
-            mclk_rate = <24>;
-        };
-     gc0308{
-			is_front = <1>;
-			rockchip,power = <&gpio2 GPIO_B2 GPIO_ACTIVE_HIGH>;
-			rockchip,powerdown = <&gpio3 GPIO_D7 GPIO_ACTIVE_HIGH>;
-			pwdn_active = <gc0308_PWRDN_ACTIVE>;
-			pwr_active = <PWR_ACTIVE_HIGH>;
-			mir = <0>;
-			flash_attach = <0>;
-			resolution = <gc0308_FULL_RESOLUTION>;
-			powerup_sequence = <gc0308_PWRSEQ>;
-			orientation = <180>;
-			i2c_add = <gc0308_I2C_ADDR>;
+			i2c_add = <0x5a>;
 			i2c_rata = <100000>;
 			i2c_chl = <2>;
 			cif_chl = <0>;
 			mclk_rate = <24>;
 		};
+
 
 	};
 };

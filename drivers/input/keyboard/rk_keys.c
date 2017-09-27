@@ -42,7 +42,7 @@
 #define EV_ENCALL                       KEY_F4
 #define EV_MENU                         KEY_F1
 
-#if 0
+#if 1
 #define key_dbg(bdata, format, arg...)		\
 	dev_info(&bdata->input->dev, format, ##arg)
 #else
@@ -64,6 +64,7 @@ struct rk_keys_button {
 	u32 code;		/* key code */
 	const char *desc;	/* key label */
 	u32 state;		/* key up & down state */
+	u32 long_press_count; /* add a custom long press count */
 	int gpio;		/* gpio only */
 	int adc_value;		/* adc only */
 	int adc_state;		/* adc only */
@@ -113,6 +114,7 @@ void rk_send_wakeup_key(void)
 }
 EXPORT_SYMBOL(rk_send_wakeup_key);
 
+int aaa =0;
 static void keys_timer(unsigned long _data)
 {
 	struct rk_keys_button *button = (struct rk_keys_button *)_data;
@@ -125,16 +127,95 @@ static void keys_timer(unsigned long _data)
 			   button->active_low);
 	else
 		state = !!button->adc_state;
-
 	if (button->state != state) {
 		button->state = state;
+		
+		
+		if (button->code == 140) 
+		{
+					input_report_key(input, KEY_PAGEDOWN, 1);
+					input_sync(input);
+					input_report_key(input, KEY_PAGEDOWN, 0);
+					input_sync(input);
+					printk("phm  KEY_PAGEDOWN 109\n");
+					goto READY_END;
+		}
+
+		if (button->code == 147) {
+				
+			if(button->state == 0) {
+				aaa =0;
+				if (button->long_press_count > 88) {
+					// KEY KEY_KP7 71
+					input_report_key(input, KEY_KP7, 0);
+					input_sync(input);
+				} else {
+					// KEY KEY_KP8 72
+					input_report_key(input, KEY_KP8, 1);
+					input_sync(input);
+					input_report_key(input, KEY_KP8, 0);
+					input_sync(input);
+				}
+				button->long_press_count = 0;
+			} else if (button->state == 1) {
+				button->long_press_count = 0;
+				aaa=1;
+			}
+			
+			button->long_press_count++;
+			goto READY_END;
+		}
+		
+
+		// xujie@yf-space.com add 20170810
+		if (button->code == 158/*back key adc*/) {
+			key_dbg(pdata, "KEY_BACK state[%d] long_press_count[%d]", 
+				button->state, button->long_press_count);
+			if(button->state == 0) {
+				if (button->long_press_count > 88) {
+					// KEY LAUNCHER UI - KEY_PAGEUP
+					input_report_key(input, KEY_PAGEUP, 1);
+					input_sync(input);
+					input_report_key(input, KEY_PAGEUP, 0);
+					input_sync(input);
+					key_dbg(pdata, "KEY_PAGEUP[%d].", KEY_PAGEUP);
+				} else {
+					// KEY BACK
+					input_report_key(input, KEY_BACK, 1);
+					input_sync(input);
+					input_report_key(input, KEY_BACK, 0);
+					input_sync(input);
+					key_dbg(pdata, "KEY_BACK[%d].", KEY_BACK);
+				}
+
+				button->long_press_count = 0;
+			} else if (button->state == 1) {
+				button->long_press_count = 0;
+			}
+			button->long_press_count++;
+			goto READY_END;
+		}
+
 		input_event(input, EV_KEY, button->code, button->state);
-		key_dbg(pdata, "%skey[%s]: report event[%d] state[%d]\n",
+		key_dbg(pdata, "%skey[%s]: report event[%d] state[%d], count[%d]\n",
 			button->type == TYPE_ADC ? "adc" : "gpio",
-			button->desc, button->code, button->state);
-		input_event(input, EV_KEY, button->code, button->state);
+			button->desc, button->code, button->state, button->long_press_count);
+		//input_event(input, EV_KEY, button->code, button->state);
 		input_sync(input);
+	} else {
+		button->long_press_count ++;
+			
 	}
+
+READY_END:
+
+	if(aaa==1 && button->long_press_count > 88)
+		{
+		aaa =0;
+		input_report_key(input, KEY_KP7, 1);
+		input_sync(input);
+	key_dbg(pdata, "KEY_KP7 11111[%d].", KEY_KP7);
+		}
 
 	if (state)
 		mod_timer(&button->timer, jiffies + DEBOUNCE_JIFFIES);
@@ -147,7 +228,6 @@ static irqreturn_t keys_isr(int irq, void *dev_id)
 	struct input_dev *input = pdata->input;
 
 	BUG_ON(irq != gpio_to_irq(button->gpio));
-
 	if (button->wakeup && pdata->in_suspend) {
 		button->state = 1;
 		key_dbg(pdata,
@@ -204,6 +284,8 @@ static void adc_key_poll(struct work_struct *work)
 	ddata = container_of(work, struct rk_keys_drvdata, adc_poll_work.work);
 	if (!ddata->in_suspend) {
 		result = rk_key_adc_iio_read(ddata);
+		
+		
 		if (result > INVALID_ADVALUE && result < EMPTY_ADVALUE)
 			ddata->result = result;
 		for (i = 0; i < ddata->nbuttons; i++) {
@@ -378,6 +460,11 @@ static int keys_probe(struct platform_device *pdev)
 
 		input_set_capability(input, EV_KEY, button->code);
 	}
+	input_set_capability(input, EV_KEY, KEY_PAGEUP);
+	input_set_capability(input, EV_KEY, KEY_PAGEDOWN);
+	input_set_capability(input, EV_KEY, KEY_KP7);
+	input_set_capability(input, EV_KEY, KEY_KP8);
+	
 
 	wake_lock_init(&ddata->wake_lock, WAKE_LOCK_SUSPEND, input->name);
 	device_init_wakeup(dev, wakeup);

@@ -22,6 +22,10 @@ config TOUCHSCREEN_GSLX680
 	help
 		gslX680 touchscreen driver
 
+config TOUCHSCREEN_HYN_CST2XX
+	tristate "cst2xx touchscreen driver"
+	help
+	  cst2xx touchscreen driver
 config TOUCHSCREEN_GT8XX
 	tristate "Goodix touch screen gt801X2 support for rockchip based platform"
 	help
