@@ -1,0 +1,20 @@
+#
+# Touchscreen driver configuration
+#
+menuconfig NFC
+	bool "nfc"
+	help
+	  Say Y here, and a list of supported NFC will be displayed.
+	  This option doesn't affect the kernel.
+
+	  If unsure, say Y.
+
+if NFC
+
+config NFC_PN548
+	tristate "nfc_pn_548"
+	default n	
+	help
+	    say Y here if you have a NFC_PN548 interface .  
+	    
+endif
