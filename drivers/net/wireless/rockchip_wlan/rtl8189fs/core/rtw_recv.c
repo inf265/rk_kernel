@@ -83,6 +83,11 @@ _func_enter_;
 
 	_rtw_spinlock_init(&precvpriv->lock);
 
+#ifdef CONFIG_RECV_THREAD_MODE
+	_rtw_init_sema(&precvpriv->recv_sema, 0);
+	_rtw_init_sema(&precvpriv->terminate_recvthread_sema, 0);
+#endif
+
 	_rtw_init_queue(&precvpriv->free_recv_queue);
 	_rtw_init_queue(&precvpriv->recv_pending_queue);
 	_rtw_init_queue(&precvpriv->uc_swdec_pending_queue);
@@ -897,6 +902,81 @@ _func_exit_;
 
 	return _SUCCESS;
 
+}
+
+/* VALID_PN_CHK
+ * Return true when PN is legal, otherwise false.
+ * Legal PN:
+ *	1. If old PN is 0, any PN is legal
+ *	2. PN > old PN
+ */
+#define PN_LESS_CHK(a, b)	(((a-b) & 0x800000000000) != 0)
+#define VALID_PN_CHK(new, old)	(((old) == 0) || PN_LESS_CHK(old, new))
+#define CCMPH_2_KEYID(ch)	(((ch) & 0x00000000c0000000) >> 30)
+#define CCMPH_2_PN(ch)	((ch) & 0x000000000000ffff) \
+				| (((ch) & 0xffffffff00000000) >> 16)
+sint recv_ucast_pn_decache(union recv_frame *precv_frame);
+sint recv_ucast_pn_decache(union recv_frame *precv_frame)
+{
+	_adapter *padapter = precv_frame->u.hdr.adapter;
+	struct rx_pkt_attrib *pattrib = &precv_frame->u.hdr.attrib;
+	struct sta_info *sta = precv_frame->u.hdr.psta;
+	struct stainfo_rxcache *prxcache = &sta->sta_recvpriv.rxcache;
+	u8 *pdata = precv_frame->u.hdr.rx_data;
+	u32 data_len = precv_frame->u.hdr.len;
+	sint tid = precv_frame->u.hdr.attrib.priority;
+	u64 tmp_iv_hdr = 0;
+	u64 curr_pn = 0, pkt_pn = 0;
+
+	if (tid > 15)
+		return _FAIL;
+
+	if (pattrib->encrypt == _AES_) {
+		tmp_iv_hdr = le64_to_cpu(*(u64*)(pdata + pattrib->hdrlen));
+		pkt_pn = CCMPH_2_PN(tmp_iv_hdr);
+	
+		tmp_iv_hdr = le64_to_cpu(*(u64*)prxcache->iv[tid]);
+		curr_pn = CCMPH_2_PN(tmp_iv_hdr);	
+
+		if (!VALID_PN_CHK(pkt_pn, curr_pn)) {
+			/* return _FAIL; */
+		} else
+			_rtw_memcpy(prxcache->iv[tid], (pdata + pattrib->hdrlen), sizeof(prxcache->iv[tid]));
+	}
+
+	return _SUCCESS;
+}
+
+sint recv_bcast_pn_decache(union recv_frame *precv_frame);
+sint recv_bcast_pn_decache(union recv_frame *precv_frame)
+{
+	_adapter *padapter = precv_frame->u.hdr.adapter;
+	struct mlme_priv *pmlmepriv = &padapter->mlmepriv;
+	struct security_priv *psecuritypriv = &padapter->securitypriv;
+	struct rx_pkt_attrib *pattrib = &precv_frame->u.hdr.attrib;
+	u8 *pdata = precv_frame->u.hdr.rx_data;
+	u32 data_len = precv_frame->u.hdr.len;
+	u64 tmp_iv_hdr = 0;
+	u64 curr_pn = 0, pkt_pn = 0;
+	u8 key_id;
+
+	if ((pattrib->encrypt == _AES_) &&
+		(check_fwstate(pmlmepriv, WIFI_STATION_STATE) == _TRUE)) {		
+
+		tmp_iv_hdr = le64_to_cpu(*(u64*)(pdata + pattrib->hdrlen));
+		key_id = CCMPH_2_KEYID(tmp_iv_hdr);
+		pkt_pn = CCMPH_2_PN(tmp_iv_hdr);
+	
+		curr_pn = le64_to_cpu(*(u64*)psecuritypriv->iv_seq[key_id]);
+		curr_pn &= 0x0000ffffffffffff;
+
+		if (!VALID_PN_CHK(pkt_pn, curr_pn))
+			return _FAIL;
+
+		*(u64*)psecuritypriv->iv_seq[key_id] = cpu_to_le64(pkt_pn);
+	}
+
+	return _SUCCESS;
 }
 
 void process_pwrbit_data(_adapter *padapter, union recv_frame *precv_frame);
@@ -2066,6 +2146,26 @@ _func_enter_;
 		#endif
 		ret= _FAIL;
 		goto exit;
+	}
+
+	if (!IS_MCAST(pattrib->ra)) {
+		if (recv_ucast_pn_decache(precv_frame) == _FAIL) {
+			#ifdef DBG_RX_DROP_FRAME
+			DBG_871X("DBG_RX_DROP_FRAME "FUNC_ADPT_FMT" recv_ucast_pn_decache return _FAIL\n"
+				, FUNC_ADPT_ARG(adapter));
+			#endif
+			ret = _FAIL;
+			goto exit;
+		}		
+	} else {
+		if (recv_bcast_pn_decache(precv_frame) == _FAIL) {
+			#ifdef DBG_RX_DROP_FRAME
+			DBG_871X("DBG_RX_DROP_FRAME "FUNC_ADPT_FMT" recv_bcast_pn_decache _FAIL for invalid PN!\n"
+				, FUNC_ADPT_ARG(adapter));
+			#endif
+			ret = _FAIL;
+			goto exit;
+		}
 	}
 
 	if(pattrib->privacy){
@@ -3557,11 +3657,15 @@ int recv_indicatepkt_reorder(_adapter *padapter, union recv_frame *prframe)
 	//recv_indicatepkts_in_order(padapter, preorder_ctrl, _TRUE);
 	if(recv_indicatepkts_in_order(padapter, preorder_ctrl, _FALSE)==_TRUE)
 	{
+		if (!preorder_ctrl->bReorderWaiting) {
+			preorder_ctrl->bReorderWaiting = _TRUE;
 		_set_timer(&preorder_ctrl->reordering_ctrl_timer, REORDER_WAIT_TIME);
+		}
 		_exit_critical_bh(&ppending_recvframe_queue->lock, &irql);
 	}
 	else
 	{
+		preorder_ctrl->bReorderWaiting = _FALSE;
 		_exit_critical_bh(&ppending_recvframe_queue->lock, &irql);
 		_cancel_timer_ex(&preorder_ctrl->reordering_ctrl_timer);
 	}
@@ -3593,6 +3697,10 @@ void rtw_reordering_ctrl_timeout_handler(void *pcontext)
 	//DBG_871X("+rtw_reordering_ctrl_timeout_handler()=>\n");
 
 	_enter_critical_bh(&ppending_recvframe_queue->lock, &irql);
+
+	if (preorder_ctrl) {
+		preorder_ctrl->bReorderWaiting = _FALSE;
+	}
 
 	if(recv_indicatepkts_in_order(padapter, preorder_ctrl, _TRUE)==_TRUE)
 	{
@@ -3976,6 +4084,11 @@ static sint fill_radiotap_hdr(_adapter *padapter, union recv_frame *precvframe, 
 	/* (0 << IEEE80211_RADIOTAP_AMPDU_STATUS)      | \ */
 	/* (0 << IEEE80211_RADIOTAP_VHT)               | \ */
 #endif
+
+#ifndef IEEE80211_RADIOTAP_RX_FLAGS
+#define IEEE80211_RADIOTAP_RX_FLAGS 14
+#endif
+
 #ifndef IEEE80211_RADIOTAP_MCS
 #define IEEE80211_RADIOTAP_MCS 19
 #endif
@@ -4246,7 +4359,7 @@ static sint fill_radiotap_hdr(_adapter *padapter, union recv_frame *precvframe, 
 	return ret;
 
 }
-
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 24))
 int recv_frame_monitor(_adapter *padapter, union recv_frame *rframe)
 {
 	int ret = _SUCCESS;
@@ -4293,7 +4406,7 @@ int recv_frame_monitor(_adapter *padapter, union recv_frame *rframe)
 exit:
 	return ret;
 }
-
+#endif
 int recv_func_prehandle(_adapter *padapter, union recv_frame *rframe)
 {
 	int ret = _SUCCESS;
@@ -4511,7 +4624,9 @@ int recv_func(_adapter *padapter, union recv_frame *rframe)
 
 	if (check_fwstate(mlmepriv, WIFI_MONITOR_STATE)) {
 		/* monitor mode */
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 24))
 		recv_frame_monitor(padapter, rframe);
+#endif
 		ret = _SUCCESS;
 		goto exit;
 	} else
@@ -4961,3 +5076,52 @@ void rtw_reset_continual_no_rx_packet(struct sta_info *sta, int tid_index)
 {	
 	ATOMIC_SET(&sta->continual_no_rx_packet[tid_index], 0);	
 }
+
+#ifdef CONFIG_RECV_THREAD_MODE
+thread_return rtw_recv_thread(thread_context context)
+{
+	_adapter *adapter = (_adapter *)context;
+	struct recv_priv *recvpriv = &adapter->recvpriv;
+	s32 err = _SUCCESS;
+#ifdef PLATFORM_LINUX
+	struct sched_param param = { .sched_priority = 1 };
+
+	sched_setscheduler(current, SCHED_FIFO, &param);
+#endif /* PLATFORM_LINUX */
+	thread_enter("RTW_RECV_THREAD");
+
+	RTW_INFO(FUNC_ADPT_FMT" enter\n", FUNC_ADPT_ARG(adapter));
+
+	do {
+		err = _rtw_down_sema(&recvpriv->recv_sema);
+		if (_FAIL == err) {
+			RTW_ERR(FUNC_ADPT_FMT" down recv_sema fail!\n", FUNC_ADPT_ARG(adapter));
+			goto exit;
+		}
+
+		if (RTW_CANNOT_RUN(adapter)) {
+			RTW_INFO(FUNC_ADPT_FMT" DS:%d, SR:%d\n", FUNC_ADPT_ARG(adapter)
+				, rtw_is_drv_stopped(adapter), rtw_is_surprise_removed(adapter));
+			goto exit;
+		}
+
+		err = rtw_hal_recv_hdl(adapter);
+
+		if (err == RTW_RFRAME_UNAVAIL
+			|| err == RTW_RFRAME_PKT_UNAVAIL
+		) {
+			rtw_msleep_os(1);
+			_rtw_up_sema(&recvpriv->recv_sema);
+		}
+
+		flush_signals_thread();
+
+	} while (err != _FAIL);
+
+exit:
+	_rtw_up_sema(&adapter->recvpriv.terminate_recvthread_sema);
+	RTW_INFO(FUNC_ADPT_FMT" exit\n", FUNC_ADPT_ARG(adapter));
+	thread_exit();
+}
+#endif /* CONFIG_RECV_THREAD_MODE */
+

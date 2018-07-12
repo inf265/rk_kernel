@@ -1481,6 +1481,8 @@ done:
 
 int gpio_request(unsigned gpio, const char *label)
 {
+if(gpio == 40)
+dump_stack();
 	return gpiod_request(gpio_to_desc(gpio), label);
 }
 EXPORT_SYMBOL_GPL(gpio_request);

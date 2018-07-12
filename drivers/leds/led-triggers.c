@@ -48,6 +48,7 @@ ssize_t led_trigger_store(struct device *dev, struct device_attribute *attr,
 
 	if (!strcmp(trigger_name, "none")) {
 		led_trigger_remove(led_cdev);
+		printk("led_trigger_store off \n");
 		return count;
 	}
 

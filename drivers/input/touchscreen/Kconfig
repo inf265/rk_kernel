@@ -21,7 +21,8 @@ config TOUCHSCREEN_GSLX680
 	tristate "gslX680 touchscreen driver"
 	help
 		gslX680 touchscreen driver
-
+config TOUCHSCREEN_GSLX680_RK3028
+		tristate "gslX680 rk3028 touchscreen panel support "
 config TOUCHSCREEN_HYN_CST2XX
 	tristate "cst2xx touchscreen driver"
 	help

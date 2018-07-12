@@ -20,7 +20,7 @@
 #define DBG(x...)
 #endif
 
-static int pwr_on_thrsd = 1;          //power on capcity threshold
+static int pwr_on_thrsd = 3;          //power on capcity threshold
 
 static int __init pwr_on_thrsd_setup(char *str)
 {
@@ -119,12 +119,13 @@ static int  __init start_charge_logo_display(void)
 	val_capacity.intval = rk_get_system_battery_capacity();
 	
 	// low power   and  discharging
-#if 0
+#if 1
 	if((val_capacity.intval < pwr_on_thrsd )&&(val_status.intval != POWER_SUPPLY_STATUS_CHARGING))
 	{
-		printk("low power\n");
-		kernel_power_off();
-		while(1);
+		printk("low power 2\n");
+		add_bootmode_charger_to_cmdline(1);
+		//kernel_power_off();
+		//while(1);
 		return 0;
 	}
 #endif

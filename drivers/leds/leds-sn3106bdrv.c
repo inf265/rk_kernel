@@ -26,6 +26,7 @@
 #include <linux/regulator/machine.h>
 #include <linux/regmap.h>
 
+#include "tp_suspend.h"
 
 static int debug;
 module_param(debug, int, S_IRUGO|S_IWUSR);
@@ -51,7 +52,8 @@ static unsigned char g_LedCTRL=0;
 #define	SN3106B_REG_SW_RST 		0x17
 
 
-
+int nowoffBreath;
+struct class *leds_sn3106b;
 
 
 
@@ -92,6 +94,7 @@ struct sn3106b_led {
 	struct mutex lock;
 	 int delay_off;
 	 int delay_on;
+	 struct  tp_device  tp;
 		
 	/*
 	 * Making led_classdev as array is not recommended, because array
@@ -181,6 +184,13 @@ void Led_Breath(struct led_classdev *cdev,unsigned char Ch,unsigned int Interval
 
 	for (step = 0; step < 32;step++)
 	{
+	if(nowoffBreath==0)
+		{
+		printk("nowoffBreath1\n");
+		Led_SetBrightness(6,255);
+		Led_DataUpdate();
+		 break;
+		}
 //	Led_SetBrightness(Ch,Gamma_T32[step]);
 	Led_SetBrightness(6,Gamma_T32[step]);
 	Led_DataUpdate();
@@ -191,6 +201,13 @@ void Led_Breath(struct led_classdev *cdev,unsigned char Ch,unsigned int Interval
 	
 	for (step = 31; step >=0;step--)
 	{
+	if(nowoffBreath==0)
+		{
+		printk("nowoffBreath2\n");
+		Led_SetBrightness(6,255);
+		Led_DataUpdate();
+		 break;
+		}	
 //	Led_SetBrightness(Ch,Gamma_T32[step]);
 	Led_SetBrightness(6,Gamma_T32[step]);
 	Led_DataUpdate();
@@ -253,8 +270,103 @@ static void sn3106b_strobe_brightness_set(struct led_classdev *cdev,
 {
 	struct sn3106b_led *led = ldev_to_led(cdev);
 	Led_SetBrightness(6,brightness);
+	
+	if(brightness==0)
+	nowoffBreath = 0;
+	else
+	nowoffBreath =1;
+	
 	Led_DataUpdate();
 }
+
+static int hyn_ts_early_suspend(struct tp_device *tp_d)
+{
+	printk("sn3106b Enter %s\n", __func__);
+	Led_SetBrightness(6,0);
+	Led_SetBrightness(4,0);
+	Led_SetBrightness(5,0);
+	Led_DataUpdate();
+	return 0;
+}
+
+static int hyn_ts_late_resume(struct tp_device *tp_d)
+{
+	printk("sn3106b Enter %s\n", __func__);
+	Led_SetBrightness(6,255);
+	Led_SetBrightness(4,255);
+	Led_SetBrightness(5,255);
+	Led_DataUpdate();
+	return 0;
+}
+static void sn3106_control(int l,int r)
+{
+	printk("sn3106_control----l===%d,r===%d\n",l,r);
+
+		if(l==00)
+		{
+		Led_SetBrightness(4,0);
+		Led_SetBrightness(5,0);
+		Led_DataUpdate();
+
+		}
+		if(l==11)
+		{
+		Led_SetBrightness(4,255);
+		Led_SetBrightness(5,255);
+		Led_DataUpdate();
+
+		}
+		if(l==01)
+		{
+		Led_SetBrightness(4,0);
+		Led_SetBrightness(5,255);
+		Led_DataUpdate();
+
+		}
+		if(l==10)
+		{
+		Led_SetBrightness(4,255);
+		Led_SetBrightness(5,0);
+		Led_DataUpdate();
+
+		}
+
+}
+
+
+static ssize_t sn3106b_status_read(struct class *cls, struct class_attribute *attr, char *_buf)
+	{
+	
+		return sprintf(_buf, "%d\n", _buf);
+		
+	}
+
+static ssize_t sn3106b_status_write(struct class *cls, struct class_attribute *attr, const char *_buf, size_t _count)
+	{
+     unsigned int    val;
+
+    if(!(sscanf(_buf, "%u\n", &val)))   
+		return -EINVAL;
+
+		printk("sn3106b :%d\n",val);
+
+		int l;
+		int r;	
+		int n = val;
+		int one = n / 1 % 10;
+		int two = n / 10 % 10;
+		int three = n / 100 % 10;
+		int four = n / 1000 % 10;	
+		l=two*10+one;
+		r=four*10+three;
+
+		sn3106_control(l,r);
+
+		return _count; 
+	}
+
+static CLASS_ATTR(modem_status, 0777, sn3106b_status_read, sn3106b_status_write);
+
 
 static int sn3106b_probe(struct i2c_client *client,
 			const struct i2c_device_id *id)
@@ -264,6 +376,7 @@ static int sn3106b_probe(struct i2c_client *client,
 	int ret, i;
 	int err;
 	g_LedCTRL=0x3f;
+	nowoffBreath =1;
 	printk("sn3106b_probe\n");
 	LEDS_sn3106b_TR("%s enter: client->addr:0x%x\n",__FUNCTION__,client->addr);
 
@@ -289,6 +402,8 @@ static int sn3106b_probe(struct i2c_client *client,
 
 	printk("sn3106b i2c write.....\n");
 	Led_ChipOn();
+	Led_SetBrightness(4,255);
+	Led_SetBrightness(5,255);
 	Led_SetBrightness(6,255);
 	Led_DataUpdate();
 	
@@ -305,7 +420,10 @@ static int sn3106b_probe(struct i2c_client *client,
 	err = led_classdev_register((struct device *)
 				    &client->dev, &led->cdev_led);
 	
-
+	led->tp.tp_suspend = hyn_ts_early_suspend;
+	led->tp.tp_resume = hyn_ts_late_resume;
+    tp_register_fb(&led->tp);
+	
 	//ret = sn3106b_register_led_classdev(led);
 
 	INIT_DELAYED_WORK(&led->work, sn3106b_led_work);
@@ -331,6 +449,7 @@ static int sn3106b_suspend(struct i2c_client *client, pm_message_t mesg)
 {
 	struct sn3106b_led *led = i2c_get_clientdata(client);
 	Led_ChipOff();
+	printk("sn3106b_suspend\n");
 	return 0;
 }
 
@@ -339,6 +458,7 @@ static int sn3106b_resume(struct i2c_client *client)
 	struct sn3106b_led *led = i2c_get_clientdata(client);
 	Led_ChipOn();
 	flush_work(&led->work);
+	printk("sn3106b_resume\n");
 	return 0;
 }
 
@@ -363,6 +483,7 @@ MODULE_DEVICE_TABLE(of, sn3106b_of_match);
 
 
 
+
 static struct i2c_driver sn3106b_i2c_driver = {
 	.driver	= {
 		.name	= "sn3106b",
@@ -379,6 +500,9 @@ static struct i2c_driver sn3106b_i2c_driver = {
 static int __init sn3106b_init(void)
 {
 	printk("sn3106b_init\n");
+		leds_sn3106b = class_create(THIS_MODULE, "sn3016b_l_r");
+	   class_create_file(leds_sn3106b, &class_attr_modem_status);
+	
 	return i2c_add_driver(&sn3106b_i2c_driver);
 }
 module_init(sn3106b_init);

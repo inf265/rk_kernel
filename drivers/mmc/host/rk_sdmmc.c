@@ -195,6 +195,8 @@ static const struct file_operations dw_mci_regs_fops = {
 	.read		= seq_read,
 	.llseek		= seq_lseek,
 	.release	= single_release,
+	
+	
 };
 
 static void dw_mci_init_debugfs(struct dw_mci_slot *slot)
@@ -1278,8 +1280,16 @@ static void dw_mci_request(struct mmc_host *mmc, struct mmc_request *mrq)
 {
 	struct dw_mci_slot *slot = mmc_priv(mmc);
 	struct dw_mci *host = slot->host;
-
+ unsigned long times;
+ u32 status;
 	WARN_ON(slot->mrq);
+ times = jiffies + msecs_to_jiffies(3000);
+ do {
+ status = mci_readl(host, STATUS);
+ if (!(status & (SDMMC_STAUTS_DATA_BUSY | SDMMC_STAUTS_MC_BUSY)))
+ break;
+ usleep_range(100, 300);
+ } while (time_before(jiffies, times));
 
 	/*
 	 * The check for card presence and queueing of the request must be
@@ -2047,6 +2057,7 @@ static void dw_mci_deal_data_end(struct dw_mci *host, struct mmc_request *mrq)
 	__releases(&host->lock)
 	__acquires(&host->lock)
 {
+	return;
 	if (DW_MCI_SEND_STATUS == host->dir_status){
 		dw_mci_wait_unbusy(host);
 	}
@@ -3519,8 +3530,7 @@ static int dw_mci_init_slot(struct dw_mci *host, unsigned int id)
 		mmc->hold_reg_flag |= drv_data->hold_reg_flag[ctrl_id];		
 
 	/* set the compatibility of driver. */
-	mmc->caps |= MMC_CAP_UHS_SDR12 | MMC_CAP_UHS_SDR25 | MMC_CAP_UHS_SDR50 
-	                | MMC_CAP_UHS_SDR104 | MMC_CAP_ERASE ;
+	mmc->caps |= MMC_CAP_ERASE ;//phm add
 
 	if (host->pdata->caps2)
 		mmc->caps2 = host->pdata->caps2;

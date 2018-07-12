@@ -103,10 +103,12 @@ struct recv_reorder_ctrl
 	u8 ampdu_size;
 	_queue pending_recvframe_queue;
 	_timer reordering_ctrl_timer;
+	u8 bReorderWaiting;
 };
 
 struct	stainfo_rxcache	{
 	u16 	tid_rxseq[16];
+	u8 iv[16][8];
 /*
 	unsigned short 	tid0_rxseq;
 	unsigned short 	tid1_rxseq;
@@ -646,6 +648,10 @@ void rtw_reordering_ctrl_timeout_handler(void *pcontext);
 void rx_query_phy_status(union recv_frame *rframe, u8 *phy_stat);
 int rtw_inc_and_chk_continual_no_rx_packet(struct sta_info *sta, int tid_index);
 void rtw_reset_continual_no_rx_packet(struct sta_info *sta, int tid_index);
+
+#ifdef CONFIG_RECV_THREAD_MODE
+thread_return rtw_recv_thread(thread_context context);
+#endif
 
 __inline static u8 *get_rxmem(union recv_frame *precvframe)
 {

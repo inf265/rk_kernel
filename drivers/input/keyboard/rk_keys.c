@@ -115,6 +115,10 @@ void rk_send_wakeup_key(void)
 EXPORT_SYMBOL(rk_send_wakeup_key);
 
 int aaa =0;
+int bbb =0;
+int ccc =0;
+
+
 static void keys_timer(unsigned long _data)
 {
 	struct rk_keys_button *button = (struct rk_keys_button *)_data;
@@ -127,6 +131,8 @@ static void keys_timer(unsigned long _data)
 			   button->active_low);
 	else
 		state = !!button->adc_state;
+
+	//printk("button->code===========%d\n",button->code);
 	if (button->state != state) {
 		button->state = state;
 		
@@ -137,7 +143,7 @@ static void keys_timer(unsigned long _data)
 					input_sync(input);
 					input_report_key(input, KEY_PAGEDOWN, 0);
 					input_sync(input);
-					printk("phm  KEY_PAGEDOWN 109\n");
+					printk("phm  KEY_PAGEDOWN 140\n");
 					goto READY_END;
 		}
 
@@ -147,14 +153,18 @@ static void keys_timer(unsigned long _data)
 				aaa =0;
 				if (button->long_press_count > 88) {
 					// KEY KEY_KP7 71
+					
 					input_report_key(input, KEY_KP7, 0);
 					input_sync(input);
 				} else {
 					// KEY KEY_KP8 72
+					rk_send_wakeup_key();
 					input_report_key(input, KEY_KP8, 1);
 					input_sync(input);
 					input_report_key(input, KEY_KP8, 0);
 					input_sync(input);
+					
+					printk("phm  KEY_PAGEDOWN 109\n");
 				}
 				button->long_press_count = 0;
 			} else if (button->state == 1) {
@@ -169,16 +179,20 @@ static void keys_timer(unsigned long _data)
 
 		// xujie@yf-space.com add 20170810
 		if (button->code == 158/*back key adc*/) {
-			key_dbg(pdata, "KEY_BACK state[%d] long_press_count[%d]", 
-				button->state, button->long_press_count);
+		//	key_dbg(pdata, "KEY_BACK state[%d] long_press_count[%d]", 
+			//	button->state, button->long_press_count);
 			if(button->state == 0) {
+				bbb=0;
 				if (button->long_press_count > 88) {
 					// KEY LAUNCHER UI - KEY_PAGEUP
-					input_report_key(input, KEY_PAGEUP, 1);
-					input_sync(input);
-					input_report_key(input, KEY_PAGEUP, 0);
-					input_sync(input);
-					key_dbg(pdata, "KEY_PAGEUP[%d].", KEY_PAGEUP);
+				//	input_report_key(input, KEY_PAGEUP, 1);
+				////	input_sync(input);
+				//	input_report_key(input, KEY_PAGEUP, 0);
+				//	input_sync(input);
+
+				input_report_key(input, KEY_HOME, 0);
+				input_sync(input);
+					key_dbg(pdata, "KEY_HOME  up[%d].", KEY_HOME);
 				} else {
 					// KEY BACK
 					input_report_key(input, KEY_BACK, 1);
@@ -190,11 +204,48 @@ static void keys_timer(unsigned long _data)
 
 				button->long_press_count = 0;
 			} else if (button->state == 1) {
+				bbb=1;
 				button->long_press_count = 0;
 			}
 			button->long_press_count++;
 			goto READY_END;
 		}
+		//KEY_KP2 80 left button
+
+
+		if (button->code == 165) {
+		//	key_dbg(pdata, "KEY_KP2 state[%d] long_press_count[%d]", 
+			//	button->state, button->long_press_count);
+
+			if(button->state == 0) {
+				ccc =0;
+				if (button->long_press_count > 88) {
+					// KEY KEY_KP1 79
+					
+					input_report_key(input, KEY_KP1, 0);
+					input_sync(input);
+					printk("phm  KEY_KP1==%d\n",KEY_KP1);
+				} else {
+					// KEY KEY_KP2 80
+					input_report_key(input, KEY_KP2, 1);
+					input_sync(input);
+					input_report_key(input, KEY_KP2, 0);
+					input_sync(input);
+					
+					printk("phm  KEY_KP2==%d\n",KEY_KP2);
+				}
+				button->long_press_count = 0;
+			} else if (button->state == 1) {
+				button->long_press_count = 0;
+				ccc=1;
+			}
+			
+			button->long_press_count++;
+			goto READY_END;
+		}
+
+
+		
 
 		input_event(input, EV_KEY, button->code, button->state);
 		key_dbg(pdata, "%skey[%s]: report event[%d] state[%d], count[%d]\n",
@@ -203,19 +254,40 @@ static void keys_timer(unsigned long _data)
 		//input_event(input, EV_KEY, button->code, button->state);
 		input_sync(input);
 	} else {
+	if(button->code == 147||button->code == 158||button->code == 165)
 		button->long_press_count ++;
 			
 	}
 
+if(aaa==1 && button->long_press_count > 88)
+	{
+	aaa =0;
+	input_report_key(input, KEY_KP7, 1);
+	input_sync(input);
+key_dbg(pdata, "KEY_KP7 11111[%d].", KEY_KP7);
+	}
+if(bbb==1 && button->long_press_count > 88)
+	{
+	bbb =0;
+	input_report_key(input, KEY_HOME, 1);
+	input_sync(input);
+
+key_dbg(pdata, "KEY_HOME  down  [%d].", KEY_HOME);
+	}
+
+if(ccc==1 && button->long_press_count > 88)
+	{
+	ccc =0;
+	input_report_key(input, KEY_KP1, 1);
+	input_sync(input);
+
+key_dbg(pdata, "KEY_KP1  down  [%d].", KEY_KP1);
+	}
+
+
 READY_END:
 
-	if(aaa==1 && button->long_press_count > 88)
-		{
-		aaa =0;
-		input_report_key(input, KEY_KP7, 1);
-		input_sync(input);
-	key_dbg(pdata, "KEY_KP7 11111[%d].", KEY_KP7);
-		}
+
 
 	if (state)
 		mod_timer(&button->timer, jiffies + DEBOUNCE_JIFFIES);
@@ -285,7 +357,7 @@ static void adc_key_poll(struct work_struct *work)
 	if (!ddata->in_suspend) {
 		result = rk_key_adc_iio_read(ddata);
 		
-		
+		//printk("phm adc_key_poll result=====%d\n",result);
 		if (result > INVALID_ADVALUE && result < EMPTY_ADVALUE)
 			ddata->result = result;
 		for (i = 0; i < ddata->nbuttons; i++) {
@@ -464,7 +536,9 @@ static int keys_probe(struct platform_device *pdev)
 	input_set_capability(input, EV_KEY, KEY_PAGEDOWN);
 	input_set_capability(input, EV_KEY, KEY_KP7);
 	input_set_capability(input, EV_KEY, KEY_KP8);
-	
+	input_set_capability(input, EV_KEY, KEY_KP1);
+	input_set_capability(input, EV_KEY, KEY_KP2);
+	input_set_capability(input, EV_KEY, KEY_HOME);	
 
 	wake_lock_init(&ddata->wake_lock, WAKE_LOCK_SUSPEND, input->name);
 	device_init_wakeup(dev, wakeup);

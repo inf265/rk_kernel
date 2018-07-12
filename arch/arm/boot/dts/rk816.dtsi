@@ -37,14 +37,14 @@
 		rk816_ldo1_reg: regulator@4 {
 			reg = <4>;
 			regulator-compatible = "RK816_LDO1";
-			regulator-always-on;
+	//		regulator-always-on;
 			regulator-boot-on;
 		};
 
 		rk816_ldo2_reg: regulator@5 {
 			reg = <5>;
 			regulator-compatible = "RK816_LDO2";
-		/*	regulator-always-on; */
+			regulator-always-on; 
 			regulator-boot-on;
 		};
 

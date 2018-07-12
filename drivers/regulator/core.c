@@ -3960,6 +3960,8 @@ static int __init regulator_init_complete(void)
 
 		if (c && c->always_on)
 			continue;
+		if (c && c->boot_on)
+			continue;
 
 		mutex_lock(&rdev->mutex);
 

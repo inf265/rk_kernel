@@ -42,7 +42,7 @@
 #include <linux/switch.h>
 #include "rk312x_codec.h"
 
-static int debug = -1;
+static int debug =1;
 module_param(debug, int, S_IRUGO|S_IWUSR);
 
 #define dbg_codec(level, fmt, arg...)		\
@@ -118,6 +118,7 @@ struct rk312x_codec_priv {
 	struct switch_dev sdev;
 	struct work_struct work;
 	struct delayed_work init_delayed_work;
+	struct delayed_work mute_delayed_work;
 	struct delayed_work hpdet_work;
 };
 static struct rk312x_codec_priv *rk312x_priv;
@@ -130,6 +131,9 @@ static struct rk312x_codec_priv *rk312x_priv;
 #define RK312x_CODEC_WORK_NULL	0
 #define RK312x_CODEC_WORK_POWER_DOWN	1
 #define RK312x_CODEC_WORK_POWER_UP	2
+#define RK312x_CODEC_LINE_IN		3
+static int tchip_line_in(int type);
+
 static struct workqueue_struct *rk312x_codec_workq;
 
 static void rk312x_codec_capture_work(struct work_struct *work);
@@ -405,9 +409,12 @@ static int rk312x_codec_ctl_gpio(int gpio, int level)
 		DBG("%s : rk312x is NULL\n", __func__);
 		return -EINVAL;
 	}
-
 	if ((gpio & CODEC_SET_SPK) && rk312x_priv
 	    && rk312x_priv->spk_ctl_gpio != INVALID_GPIO) {
+	    //phm add
+	   // gpio_set_value(30,level);
+	//	gpio_set_value(35,0);
+	//	msleep(100);
 		gpio_set_value(rk312x_priv->spk_ctl_gpio, level);
 		DBG(KERN_INFO"%s set spk clt %d\n", __func__, level);
 		msleep(rk312x_priv->spk_mute_delay);
@@ -415,9 +422,9 @@ static int rk312x_codec_ctl_gpio(int gpio, int level)
 
 	if ((gpio & CODEC_SET_HP) && rk312x_priv
 	    && rk312x_priv->hp_ctl_gpio != INVALID_GPIO) {
-		gpio_set_value(rk312x_priv->hp_ctl_gpio, level);
+		//gpio_set_value(rk312x_priv->hp_ctl_gpio, level);
 		DBG(KERN_INFO"%s set hp clt %d\n", __func__, level);
-		msleep(rk312x_priv->hp_mute_delay);
+	//	msleep(rk312x_priv->hp_mute_delay);
 	}
 
 	return 0;
@@ -799,6 +806,20 @@ static const SOC_ENUM_SINGLE_DECL(rk312x_voice_call_path_type, 0, 0,
 
 /* static int rk312x_codec_power_up(int type); */
 static int rk312x_codec_power_down(int type);
+
+int rk312x_codec_mute_dac(int mute)
+{
+	if (!rk312x_priv) {
+		DBG("%s : rk312x_priv is NULL\n", __func__);
+		return -EINVAL;
+	}
+	if (mute) {
+		snd_soc_write(rk312x_priv->codec, 0xb4, 0x40);
+		snd_soc_write(rk312x_priv->codec, 0xb8, 0x40);
+	}
+	return 0;
+}
+EXPORT_SYMBOL(rk312x_codec_mute_dac);
 
 static int rk312x_playback_path_get(struct snd_kcontrol *kcontrol,
 				    struct snd_ctl_elem_value *ucontrol)
@@ -1704,12 +1725,15 @@ static int rk312x_digital_mute(struct snd_soc_dai *dai, int mute)
 		rk312x_codec_ctl_gpio(CODEC_SET_SPK, !rk312x_priv->spk_active_level);
 		rk312x_codec_ctl_gpio(CODEC_SET_HP, !rk312x_priv->hp_active_level);
 	} else {
+	
 		if (!rk312x_priv->rk312x_for_mid) {
+			
 			INIT_DELAYED_WORK(&rk312x_priv->init_delayed_work,
 					  rk312x_codec_unpop);
 			schedule_delayed_work(&rk312x_priv->init_delayed_work,
 				msecs_to_jiffies(rk312x_priv->spk_mute_delay));
 		} else {
+		
 			switch (rk312x_priv->playback_path) {
 			case SPK_PATH:
 			case RING_SPK:
@@ -1742,26 +1766,20 @@ static struct rk312x_reg_val_typ playback_power_up_list[] = {
 	{0xa8, 0x44},
 	{0xa8, 0x55},
 
-	{0xb0, 0x82},
-	{0xb0, 0xc3},
+	{0xb0, 0x90},
+	{0xb0, 0xd8},
 
 	{0xa4, 0x88},
 	{0xa4, 0xcc},
 	{0xa4, 0xee},
 	{0xa4, 0xff},
 
-	/* {0xa8, 0x44}, */
-	/* {0xb0, 0x92}, */
-	/* {0xb0, 0xdb}, */
 	{0xac, 0x11}, /*DAC*/
-	/* {0xa8, 0x55}, */
 	{0xa8, 0x77},
-
-	{0xb0, 0xee},
+	{0xb0, 0xfc},
 
 	{0xb4, OUT_VOLUME},
 	{0xb8, OUT_VOLUME},
-	/* {0xb0, 0xff}, */
 	{0xb0, 0xff},
 	{0xa0, 0x73|0x08},
 };
@@ -1798,21 +1816,13 @@ static struct rk312x_reg_val_typ capture_power_up_list[] = {
 	{0x90, 0x66},
 	{0x9c, 0xcc},
 	{0x9c, 0xee},
-	{0x8c, 0x07},
+	{0x8c, 0x77},
 	{0x90, 0x77},
 	{0x94, 0x20 | CAP_VOL},
 	{0x98, CAP_VOL},
 	{0x88, 0xf7},
-	{0x28, 0x3c},
-	/* {0x124, 0x78}, */
-	/* {0x164, 0x78}, */
-	{0x10c, 0x20 | CAP_VOL},
-	{0x14c, 0x20 | CAP_VOL},
-	/*close left channel*/
-	{0x90, 0x07},
-	{0x88, 0xd7},
-	{0x8c, 0x07},
-	{0x9c, 0x0e},
+	//{0x10c, 0x20 | CAP_VOL},
+	//{0x14c, 0x20 | CAP_VOL2},
 
 };
 #define RK312x_CODEC_CAPTURE_POWER_UP_LIST_LEN ARRAY_SIZE(capture_power_up_list)
@@ -1840,6 +1850,64 @@ static struct rk312x_reg_val_typ capture_power_down_list[] = {
 #define RK312x_CODEC_CAPTURE_POWER_DOWN_LIST_LEN ARRAY_SIZE(\
 				capture_power_down_list)
 
+ static struct rk312x_reg_val_typ rk312x_codec_linein_bypass[] = {
+ {0x18, 0x32}, 
+ {0xa0, 0x40|0x08}, 
+ {0xa0, 0x62|0x08}, 
+ {0xa4, 0x88}, 
+ {0xa4, 0xcc}, 
+ {0xa4, 0xee}, 
+ {0xa8, 0x44}, 
+ {0xb0, 0x92}, 
+ {0xb0, 0xdb}, 
+ {0xac, 0x66}, /*bypass*/ 
+ {0xa8, 0x55}, 
+ {0xa8, 0x77}, 
+ {0xa4, 0xff}, 
+ {0xb0, 0xff}, 
+ {0xa0, 0x73|0x08}, 
+ {0xb4, OUT_VOLUME}, 
+ {0xb8, OUT_VOLUME}, 
+ 
+ {0x88, 0x80}, 
+ {0x88, 0xc0}, 
+ {0x88, 0xc7}, 
+ {0x9c, 0x88}, 
+ {0x8c, 0x04}, 
+ {0x90, 0x66}, 
+ {0x9c, 0xcc}, 
+ {0x9c, 0xee}, 
+ {0x8c, 0x07}, 
+ {0x90, 0xbb},// line in 
+ {0x94, 0x20 | CAP_VOL}, 
+ {0x98, CAP_VOL}, 
+ {0x88, 0xf7}, 
+ {0x28, 0x3c},
+ /* {0x124, 0x78}, /
+ / {0x164, 0x78}, */ 
+ {0x10c, 0x20 | CAP_VOL}, 
+ {0x14c, 0x20 | CAP_VOL},
+ };
+ #define RK312x_CODEC_LINEIN_BYPASS_LEN ARRAY_SIZE(rk312x_codec_linein_bypass)
+ 
+ static int tchip_line_in(int type)
+ {
+         struct snd_soc_codec *codec = rk312x_priv->codec;
+         int i;
+ 	if(type == RK312x_CODEC_LINE_IN){
+ 		for (i = 0; i < RK312x_CODEC_LINEIN_BYPASS_LEN; i++){
+ 			snd_soc_write(codec,rk312x_codec_linein_bypass[i].reg,rk312x_codec_linein_bypass[i].value);
+ 		}
+ 	printk("%s enable\n",__FUNCTION__);
+ 	}
+ 	if(type == RK312x_CODEC_PLAYBACK){
+ 		for (i = 0; i < RK312x_CODEC_CAPTURE_POWER_UP_LIST_LEN; i++){
+ 			snd_soc_write(codec,playback_power_up_list[i].reg,playback_power_up_list[i].value);
+ 		}
+ 	printk("%s enable\n",__FUNCTION__);
+ 	}
+ }
+ 
 static int rk312x_codec_power_up(int type)
 {
 	struct snd_soc_codec *codec = rk312x_priv->codec;
@@ -1855,9 +1923,20 @@ static int rk312x_codec_power_up(int type)
 	    type == RK312x_CODEC_CAPTURE ? "capture" : "");
 
 	if (type == RK312x_CODEC_PLAYBACK) {
+
+				for (i = 0;
+		     i < RK312x_CODEC_PLAYBACK_POWER_DOWN_LIST_LEN;
+		     i++) {
+			snd_soc_write(codec, playback_power_down_list[i].reg,
+				      playback_power_down_list[i].value);
+		}
+			 usleep_range(1000, 1100);
+
+			 
 		for (i = 0; i < RK312x_CODEC_PLAYBACK_POWER_UP_LIST_LEN; i++) {
 			snd_soc_write(codec, playback_power_up_list[i].reg,
 				      playback_power_up_list[i].value);
+			
 		}
 	} else if (type == RK312x_CODEC_CAPTURE) {
 		if (rk312x_priv->rk312x_for_mid == 1) {
@@ -2163,27 +2242,30 @@ static ssize_t gpio_store(struct kobject *kobj, struct kobj_attribute *attr,
 			  const char *buf, size_t n)
 {
 	const char *buftmp = buf;
+	unsigned int    val;
 	char cmd;
 	int ret;
 	struct rk312x_codec_priv *rk312x =
 			snd_soc_codec_get_drvdata(rk312x_priv->codec);
 
-	ret = sscanf(buftmp, "%c ", &cmd);
-	if (ret == 0)
-		return ret;
-	switch (cmd) {
-	case 'd':
-		if (rk312x->spk_ctl_gpio != INVALID_GPIO) {
-			gpio_set_value(rk312x->spk_ctl_gpio, !rk312x->spk_active_level);
-			DBG(KERN_INFO"%s : spk gpio disable\n",__func__);
-		}
 
-		if (rk312x->hp_ctl_gpio != INVALID_GPIO) {
-			gpio_set_value(rk312x->hp_ctl_gpio, !rk312x->hp_active_level);
-			DBG(KERN_INFO"%s : disable hp gpio \n",__func__);
-		}
-		break;
-	case 'e':
+    if(!(sscanf(buf, "%u\n", &val)))   
+		return -EINVAL;
+		
+		printk("gpio_store :%d\n",val);
+		
+	if(val==0)
+	{
+		gpio_set_value(13, 0);
+	}
+	if(val==1)
+	{
+		gpio_set_value(13, 1);
+	}	
+	if(val==2)
+	{
+		//phm add
+		tchip_line_in(RK312x_CODEC_PLAYBACK);
 		if (rk312x->spk_ctl_gpio != INVALID_GPIO) {
 			gpio_set_value(rk312x->spk_ctl_gpio, rk312x->spk_active_level);
 			DBG(KERN_INFO"%s : spk gpio enable\n",__func__);
@@ -2193,11 +2275,38 @@ static ssize_t gpio_store(struct kobject *kobj, struct kobj_attribute *attr,
 		gpio_set_value(rk312x->hp_ctl_gpio, rk312x->hp_active_level);
 		DBG("%s : enable hp gpio \n",__func__);
 	}
-		break;
-	default:
-		DBG(KERN_ERR"--rk312x codec %s-- unknown cmd\n", __func__);
-		break;
 	}
+
+	if(val==3)
+	{
+		tchip_line_in(RK312x_CODEC_LINE_IN);
+                if (rk312x->spk_ctl_gpio != INVALID_GPIO) {
+                        gpio_set_value(rk312x->spk_ctl_gpio, rk312x->spk_active_level);
+                        DBG(KERN_INFO"%s : spk gpio enable\n",__func__);
+                }
+
+              //  if (rk312x->hp_ctl_gpio != INVALID_GPIO) {
+              //  gpio_set_value(rk312x->hp_ctl_gpio, rk312x->hp_active_level);
+               // DBG("%s : enable hp gpio\n",__func__);
+        //	}
+        	}
+	if(val==4)
+	{
+		gpio_set_value(30,1);
+		gpio_set_value(35,0);
+		msleep(10);
+		gpio_set_value(rk312x->spk_ctl_gpio, rk312x->spk_active_level);
+
+	}
+	if(val==5)
+	{
+		gpio_set_value(30,0);
+		gpio_set_value(35,0);
+		msleep(10);
+		gpio_set_value(rk312x->spk_ctl_gpio, !rk312x->spk_active_level);
+
+	}
+
 	return n;
 }
 static struct kobject *gpio_kobj;
@@ -2241,10 +2350,13 @@ static irqreturn_t codec_hp_det_isr(int irq, void *data)
 	val = readl_relaxed(RK_GRF_VIRT + GRF_ACODEC_CON);
 	DBG("%s GRF_ACODEC_CON -- 0x%x\n", __func__, val);
 	if (val&0x1) {
+	//phm add
 		DBG("%s hp det rising\n", __func__);
+		rk312x_codec_ctl_gpio(CODEC_SET_SPK, rk312x_priv->spk_active_level);
 		writel_relaxed(val|0x10001, RK_GRF_VIRT + GRF_ACODEC_CON);
 	} else if (val&0x2) {
 		DBG("%s hp det falling\n", __func__);
+		rk312x_codec_ctl_gpio(CODEC_SET_SPK, !rk312x_priv->spk_active_level);
 		writel_relaxed(val|0x20002, RK_GRF_VIRT + GRF_ACODEC_CON);
 	}
 	cancel_delayed_work_sync(&rk312x_priv->hpdet_work);
@@ -2362,9 +2474,10 @@ static int rk312x_probe(struct snd_soc_codec *codec)
 	snd_soc_add_codec_controls(codec, rk312x_snd_path_controls,
 				   ARRAY_SIZE(rk312x_snd_path_controls));
 	INIT_DELAYED_WORK(&rk312x_priv->init_delayed_work, rk312x_delay_workq);
+	INIT_DELAYED_WORK(&rk312x_priv->mute_delayed_work, rk312x_codec_unpop);
 	INIT_DELAYED_WORK(&rk312x_priv->hpdet_work, hpdet_work_func);
 
-	schedule_delayed_work(&rk312x_priv->init_delayed_work, msecs_to_jiffies(500));
+	schedule_delayed_work(&rk312x_priv->init_delayed_work, msecs_to_jiffies(3000));
 	if (rk312x_codec->gpio_debug) {
 		gpio_kobj = kobject_create_and_add("codec-spk-ctl", NULL);
 
@@ -2477,6 +2590,7 @@ static int rk312x_platform_probe(struct platform_device *pdev)
 	rk312x->hp_ctl_gpio = of_get_named_gpio_flags(rk312x_np,
 						 "hp_ctl_io", 0, &rk312x->hp_active_level);
 	rk312x->hp_active_level = !rk312x->hp_active_level;
+	//gpio_free(rk312x->hp_ctl_gpio);
 	if (!gpio_is_valid(rk312x->hp_ctl_gpio)) {
 		dbg_codec(2, "invalid hp_ctl_gpio: %d\n",
 			  rk312x->hp_ctl_gpio);

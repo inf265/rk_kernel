@@ -364,53 +364,22 @@ int rtw_mp_start(struct net_device *dev,
 				 struct iw_request_info *info,
 				 struct iw_point *wrqu, char *extra)
 {
+	int ret = 0;
 	u8 val8;
 	PADAPTER padapter = rtw_netdev_priv(dev);
 	HAL_DATA_TYPE	*pHalData = GET_HAL_DATA(padapter);
 	struct hal_ops *pHalFunc = &padapter->HalFunc;
+	u8 rfreg0;
 
 	rtw_pm_set_ips(padapter, IPS_NONE);
 	LeaveAllPowerSaveMode(padapter);
 
-	if (padapter->registrypriv.mp_mode == 0) {
-		rtw_hal_deinit(padapter);
-		padapter->registrypriv.mp_mode = 1;
-		#ifdef CONFIG_RF_GAIN_OFFSET
-		if (!IS_HARDWARE_TYPE_8814A(padapter))
-			padapter->registrypriv.RegRfKFreeEnable = 1;
-		rtw_hal_read_chip_info(padapter);
-		#endif /*CONFIG_RF_GAIN_OFFSET*/
-		rtw_hal_init(padapter);
-	}
+	rtw_scan_abort(padapter);
 
-	if (padapter->registrypriv.mp_mode == 0)
-		return -EPERM;
+	if (rtw_mp_cmd(padapter, MP_START, RTW_CMDF_WAIT_ACK) != _SUCCESS)
+		ret = -EPERM;
 
-	if (padapter->mppriv.mode == MP_OFF) {
-		if (mp_start_test(padapter) == _FAIL)
-			return -EPERM;
-		padapter->mppriv.mode = MP_ON;
-		MPT_PwrCtlDM(padapter, 0);
-	}
-	padapter->mppriv.bmac_filter = _FALSE;
-#ifdef CONFIG_RTL8723B
-#ifdef CONFIG_USB_HCI
-	rtw_write32(padapter, 0x765, 0x0000);
-	rtw_write32(padapter, 0x948, 0x0280);
-#else
-	rtw_write32(padapter, 0x765, 0x0000);
-	rtw_write32(padapter, 0x948, 0x0000);
-#endif
-#ifdef CONFIG_FOR_RTL8723BS_VQ0
-	rtw_write32(padapter, 0x765, 0x0000);
-	rtw_write32(padapter, 0x948, 0x0280);
-#endif
-	rtw_write8(padapter, 0x66, 0x27); /*Open BT uart Log*/
-	rtw_write8(padapter, 0xc50, 0x20); /*for RX init Gain*/
-#endif
-	ODM_Write_DIG(&pHalData->odmpriv, 0x20);
-
-	return 0;
+	return ret;
 }
 
 
@@ -419,23 +388,14 @@ int rtw_mp_stop(struct net_device *dev,
 				struct iw_request_info *info,
 				struct iw_point *wrqu, char *extra)
 {
+	int ret = 0;
 	PADAPTER padapter = rtw_netdev_priv(dev);
 	struct hal_ops *pHalFunc = &padapter->HalFunc;
 
-	if (padapter->registrypriv.mp_mode == 1) {
+	if (rtw_mp_cmd(padapter, MP_STOP, RTW_CMDF_WAIT_ACK) != _SUCCESS)
+		ret = -EPERM;
 
-		MPT_DeInitAdapter(padapter);
-		pHalFunc->hal_deinit(padapter);
-		padapter->registrypriv.mp_mode = 0;
-		pHalFunc->hal_init(padapter);
-	}
-
-	if (padapter->mppriv.mode != MP_OFF) {
-		mp_stop_test(padapter);
-		padapter->mppriv.mode = MP_OFF;
-	}
-
-	return 0;
+	return ret;
 }
 
 
@@ -477,7 +437,7 @@ int rtw_mp_rate(struct net_device *dev,
 	if (padapter->mppriv.rateidx >= DESC_RATEVHTSS4MCS9)
 		return -EINVAL;
 
-	pMptCtx->MptRateIndex = padapter->mppriv.rateidx;
+	pMptCtx->MptRateIndex = HwRateToMPTRate(padapter->mppriv.rateidx);
 	SetDataRate(padapter);
 
 	wrqu->length = strlen(extra);
@@ -1297,6 +1257,27 @@ int rtw_mp_PwrCtlDM(struct net_device *dev,
 	return 0;
 }
 
+int rtw_mp_iqk(struct net_device *dev,
+		 struct iw_request_info *info,
+		 struct iw_point *wrqu, char *extra)
+{
+	PADAPTER padapter = rtw_netdev_priv(dev);
+
+	rtw_mp_trigger_iqk(padapter);
+
+	return 0;
+}
+
+int rtw_mp_lck(struct net_device *dev,
+		 struct iw_request_info *info,
+		 struct iw_point *wrqu, char *extra)
+{
+	PADAPTER padapter = rtw_netdev_priv(dev);
+
+	rtw_mp_trigger_lck(padapter);
+
+	return 0;
+}
 
 int rtw_mp_getver(struct net_device *dev,
 				  struct iw_request_info *info,
@@ -1356,10 +1337,10 @@ int rtw_mp_mon(struct net_device *dev,
 		pHalFunc->hal_deinit(padapter);
 		padapter->registrypriv.mp_mode = 0;
 		pHalFunc->hal_init(padapter);
-		/*rtw_disassoc_cmd(padapter, 0, _TRUE);*/
+		/*rtw_disassoc_cmd(padapter, 0, 0);*/
 		if (check_fwstate(pmlmepriv, _FW_LINKED) == _TRUE) {
-			rtw_disassoc_cmd(padapter, 500, _TRUE);
-			rtw_indicate_disconnect(padapter);
+			rtw_disassoc_cmd(padapter, 500, 0);
+			rtw_indicate_disconnect(padapter, 0, _FALSE);
 			/*rtw_free_assoc_resources(padapter, 1);*/
 		}
 		rtw_pm_set_ips(padapter, IPS_NORMAL);

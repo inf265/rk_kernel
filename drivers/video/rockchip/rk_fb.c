@@ -58,6 +58,7 @@
 #endif
 
 #define H_USE_FENCE 1
+#define LCD_RGB_SPI
 /* #define FB_ROATE_BY_KERNEL 1 */
 
 static int hdmi_switch_state;
@@ -305,7 +306,9 @@ static int rk_fb_data_fmt(int data_format, int bits_per_pixel)
 	}
 	return fb_data_fmt;
 }
-
+	#ifdef LCD_RGB_SPI
+	int cs_gpio, sdi_gpio, scl_gpio,rst_gpio;
+	#endif
 /*
  * rk display power control parse from dts
  */
@@ -389,10 +392,432 @@ int rk_disp_pwr_ctr_parse_dt(struct rk_lcdc_driver *dev_drv)
 				pwr_ctr->pwr_ctr.delay);
 		}
 	}
+	#ifdef LCD_RGB_SPI
+//test: cs_gpio = 56, sdi = 19, scl = 7, rst = 57
+//ok: cs = 57,sdi = 7, scl = 56, rst = 19
+	cs_gpio  = of_get_named_gpio(dev_drv->dev->of_node, "cs-gpio", 0);
+	sdi_gpio = of_get_named_gpio(dev_drv->dev->of_node, "sdi-gpio", 0);
+	scl_gpio = of_get_named_gpio(dev_drv->dev->of_node, "scl-gpio", 0);
+	rst_gpio = of_get_named_gpio(dev_drv->dev->of_node, "rst-gpio", 0);
 
+	printk("hjc>>>lcd io: %d, %d, %d, %d\n", cs_gpio, sdi_gpio, scl_gpio, rst_gpio);
+	if (gpio_request(cs_gpio, "cs_gpio") != 0) {
+	//	 gpio_free(cs_gpio);
+		 printk("cs_gpio request failed\n");
+	}
+	if (gpio_request(sdi_gpio, "sdi_gpio") != 0) {
+	//	gpio_free(sdi_gpio);
+		printk("sdi_gpio request failed\n");
+	}
+	if (gpio_request(scl_gpio, "scl_gpio") != 0) {
+	//	gpio_free(scl_gpio);
+		printk("scl_gpio request failed\n");
+	}
+	if (gpio_request(rst_gpio, "rst_gpio") != 0) {
+		//gpio_free(rst_gpio);
+		printk("rst_gpio request failed\n");
+		//return -EIO;
+	}
+		gpio_direction_output(rst_gpio, 1);
+
+#endif
 	return 0;
 }
 
+#ifdef LCD_RGB_SPI
+
+static void SPI_SendData(unsigned char value)
+{
+	int i;
+	for(i = 0; i < 8; i++) {
+		udelay(1);
+		if(value & 0x80)
+			gpio_set_value(sdi_gpio, 1);
+		else
+			gpio_set_value(sdi_gpio, 0);
+
+		gpio_set_value(scl_gpio, 0);
+		udelay(1);
+		gpio_set_value(scl_gpio, 1);
+		value <<= 1;
+	}
+}
+
+void write_command_Para(unsigned char c,unsigned char d)
+{
+	gpio_set_value(cs_gpio, 0);
+
+	SPI_SendData(c);
+	SPI_SendData(d);
+
+	gpio_set_value(cs_gpio, 1);
+}
+
+
+static void set_spi_clk(unsigned char val) {
+//	gpio_set_value(scl_gpio, val);
+    gpio_direction_output(scl_gpio, val);
+}
+
+static void set_spi_cs(unsigned char val) {
+//	gpio_set_value(cs_gpio, val);
+    gpio_direction_output(cs_gpio, val);
+}
+
+static void set_spi_mosi( unsigned char val) {
+//	gpio_set_value(sdi_gpio,val);
+    gpio_direction_output(sdi_gpio, val);
+}
+
+static void lcd_write_byte(unsigned char val) {
+    unsigned char i; 
+    for (i=0; i<8; ++i) {
+        set_spi_mosi((val >> (7 - i)) & 0x1);
+        set_spi_clk(0);
+        udelay(1);
+        set_spi_clk(1);
+    }
+}
+
+static void write_command(unsigned char val) {
+    usleep_range(1000, 1200);
+    set_spi_cs(0);
+    set_spi_mosi(0);
+    set_spi_clk(0);
+    udelay(1);
+    set_spi_clk(1);
+    lcd_write_byte(val);
+    set_spi_cs(1);
+}
+
+static void write_data(unsigned char val) {
+    usleep_range(1000, 1200);
+    set_spi_cs(0);
+    set_spi_mosi(1);
+    set_spi_clk(0);
+    udelay(1);
+    set_spi_clk(1);
+    lcd_write_byte(val);
+    set_spi_cs(1);
+}
+
+static void write_ctrl_data(unsigned char* cmds, const unsigned int len) {
+    int i = 0;
+    printk("write ctrl data,len = %d\n",len);
+    write_command(cmds[0]);
+    for (i = 1; i < len; i++) {
+        write_data(cmds[i]);
+    }
+}
+ 
+  static void ST7701S_Sleep_in(void)
+  {
+ write_command (0x28); //Enter display off
+mdelay (10); //Delay 10ms
+write_command (0x10); //Enter sleep in
+mdelay (120); //Delay 120ms
+}
+
+static void ST7701S_Sleep_out(void)
+{
+write_command (0x11); //Enter sleep out 
+mdelay (120); //Delay 120ms
+write_command (0x29); //Enter display on
+}
+ static void spi_init2(void)
+{
+
+    
+
+			write_command(0x11);
+			write_data(0x00);	
+			mdelay(10);
+			write_command(0x29);
+			write_data(0x00);	
+			mdelay(120);
+			
+			write_command(0xFF);
+			write_data(0x77);
+			write_data(0x01);
+			write_data(0x00);
+			write_data(0x00);
+			write_data(0x10);
+
+			write_command(0xC0);
+			write_data(0x63);
+			write_data(0x00);
+
+			write_command(0xC1);
+			write_data(0x0B);
+			write_data(0x02);
+
+			write_command(0xC2);
+			write_data(0x01);
+			write_data(0x04);//2-dot
+			
+			write_command(0xC3);
+			write_data(0x00);
+			//write_data(0x08);
+			//write_data(0x08);
+
+			write_command(0xCC);
+			write_data(0x18);
+
+//-------------------------------------Gamma Cluster Setting-------------------------------------------//
+      //0xb0,0x00,0x02,0x07,0x10,0x14,0x0a,0x07,0x09,0x09,0x19,0x05,0x14,0x12,0x12,0x1a,0xde
+			write_command(0xB0);
+			write_data(0x00);
+			write_data(0x02);
+			write_data(0x07);
+			write_data(0x10);
+			write_data(0x14);
+			write_data(0x0a);
+			write_data(0x07);
+			write_data(0x09);
+			write_data(0x09);
+			write_data(0x19);
+			write_data(0x05);
+			write_data(0x14);
+			write_data(0x12);
+			write_data(0x12);
+			write_data(0x1a);
+			write_data(0xDE);
+
+      //0xb1,0x00,0x02,0x08,0x0f,0x17,0x0b,0x0f,0x09,0x09,0x28,0x09,0x15,0x12,0x16,0x19,0xde
+			write_command(0xB1);
+			write_data(0x00);
+			write_data(0x02);
+			write_data(0x08);
+			write_data(0x0f);
+			write_data(0x17);
+			write_data(0x0b);
+			write_data(0x0f);
+			write_data(0x09);
+			write_data(0x09);
+			write_data(0x28);
+			write_data(0x09);
+			write_data(0x15);
+			write_data(0x12);
+			write_data(0x16);
+			write_data(0x19);
+			write_data(0xDE);
+ //0xff,0x77,0x01,0x00,0x00,0x11
+			write_command(0xFF);
+			write_data(0x77);
+			write_data(0x01);
+			write_data(0x00);
+			write_data(0x00);
+			write_data(0x11);
+//0xb0,0x6d
+			write_command(0xB0);
+			write_data(0x6D);
+
+//-------Vcom Setting----------------------------------------------//
+//0xb1,0x60
+			write_command(0xB1);
+			write_data(0x60);
+
+//-------End Vcom Setting-----------------------------------------------//
+//0xb2,0x87
+			write_command(0xB2);
+			write_data(0x87);
+//0xb3,0x80
+			write_command(0xB3);
+			write_data(0x80);
+
+			write_command(0xB5);
+			write_data(0x4D);
+
+			write_command(0xB7);
+			write_data(0x85);
+
+			write_command(0xB8);
+			write_data(0x21);
+
+			write_command(0xB9);
+			write_data(0x10);
+
+			write_command(0xC1);
+			write_data(0x78);
+
+			write_command(0xC2);
+			write_data(0x78);
+
+			write_command(0xbc);
+			write_data(0x3e);			
+
+			write_command(0xD0);
+			write_data(0x88);
+
+			write_command(0xD1);
+			write_data(0x01);
+
+//------End Power Control Registers Initial -------------------------------//
+
+			mdelay(100);
+
+      //--GIP Setting 
+
+			write_command(0xE0);
+			write_data(0x00);
+			write_data(0x00);
+			write_data(0x02);
+
+			write_command(0xE1);
+			write_data(0x04);
+			write_data(0xA0);
+			write_data(0x00);
+			write_data(0x00);
+			write_data(0x05);
+			write_data(0xA0);
+			write_data(0x00);
+			write_data(0x00);
+			write_data(0x00);
+			write_data(0x20);
+			write_data(0x20);
+
+			write_command(0xE2);
+			write_data(0x00);
+			write_data(0x00);
+			write_data(0x00);
+			write_data(0x00);
+			write_data(0x00);
+			write_data(0x00);
+			write_data(0x00);
+			write_data(0x00);
+			write_data(0x00);
+			write_data(0x00);
+			write_data(0x00);
+			write_data(0x00);
+			write_data(0x00);
+
+
+			write_command(0xE3);
+			write_data(0x00);
+			write_data(0x00);
+			write_data(0x33);
+			write_data(0x00);
+
+			write_command(0xE4);
+			write_data(0x22);
+			write_data(0x00);
+
+
+			write_command(0xE5);
+			write_data(0x03);
+			write_data(0x34);
+			write_data(0xA0);
+			write_data(0xA0);
+			write_data(0x05);
+			write_data(0x34);
+			write_data(0xA0);
+			write_data(0xA0);
+			write_data(0x00);
+			write_data(0x00);
+			write_data(0x00);
+			write_data(0x00);
+			write_data(0x00);
+			write_data(0x00);
+			write_data(0x00);
+			write_data(0x00);
+
+
+			write_command(0xE6);
+			write_data(0x00);
+			write_data(0x00);
+			write_data(0x33);
+			write_data(0x00);
+
+			write_command(0xE7);
+			write_data(0x22);
+			write_data(0x00);
+
+			write_command(0xE8);
+			write_data(0x04);
+			write_data(0x34);
+			write_data(0xA0);
+			write_data(0xA0);
+			write_data(0x06);
+			write_data(0x34);
+			write_data(0xA0);
+			write_data(0xA0);
+			write_data(0x00);
+			write_data(0x00);
+			write_data(0x00);
+			write_data(0x00);
+			write_data(0x00);
+			write_data(0x00);
+			write_data(0x00);
+			write_data(0x00);
+
+			write_command(0xEB);
+			write_data(0x02);
+			write_data(0x00);
+			write_data(0x40);
+			write_data(0x40);
+			write_data(0x00);
+			write_data(0x00);
+			write_data(0x00);
+
+			write_command(0xEC);
+			write_data(0x00);
+			write_data(0x00);
+
+			write_command(0xED);
+			write_data(0xFA);
+			write_data(0x45);
+			write_data(0x0B);
+			write_data(0xFF);
+			write_data(0xFF);
+			write_data(0xFF);
+			write_data(0xFF);
+			write_data(0xFF);
+			write_data(0xFF);
+			write_data(0xFF);
+			write_data(0xFF);
+			write_data(0xFF);
+			write_data(0xFF);
+			write_data(0xB0);
+			write_data(0x54);
+			write_data(0xAF);
+
+		  write_command(0xFF);
+			write_data(0x77);
+			write_data(0x01);
+			write_data(0x00);
+			write_data(0x00);
+			write_data(0x13);
+
+		  write_command(0xe6);
+			write_data(0x16);
+			write_data(0x7c);
+		
+		  write_command(0xFF);
+			write_data(0x77);
+			write_data(0x01);
+			write_data(0x00);
+			write_data(0x00);
+			write_data(0x00);
+		
+			write_command(0x3A);
+			write_data(0x50); 
+			write_data(0x00);		
+	
+			
+			write_command(0x11);
+			write_data(0x00);	
+			mdelay(10);
+		
+			write_command(0x29);
+			write_data(0x00);	
+			mdelay(120);
+			
+
+}
+ #endif
+
+static int is_first_time = 0;
+static int is_first_time_sleep = 0;
 int rk_disp_pwr_enable(struct rk_lcdc_driver *dev_drv)
 {
 	struct list_head *pos;
@@ -401,6 +826,9 @@ int rk_disp_pwr_enable(struct rk_lcdc_driver *dev_drv)
 	struct regulator *regulator_lcd = NULL;
 	int count = 10;
 
+	printk("ST7701S_Sleep_out\n");
+	ST7701S_Sleep_out();
+		return 0;
 	if (list_empty(&dev_drv->pwrlist_head))
 		return 0;
 	list_for_each(pos, &dev_drv->pwrlist_head) {
@@ -434,7 +862,34 @@ int rk_disp_pwr_enable(struct rk_lcdc_driver *dev_drv)
 			msleep(pwr_ctr->delay);
 		}
 	}
+	#ifdef LCD_RGB_SPI
+	printk("hjc:%s [%d]\n", __func__, __LINE__);
+	gpio_direction_output(cs_gpio, 0);
+	gpio_direction_output(sdi_gpio, 0);
+	gpio_direction_output(scl_gpio, 0);
+	
 
+
+	
+	//	lcd_spi_init();
+	if(is_first_time_sleep==1)
+	{
+	is_first_time_sleep==1;
+	printk("spi_init2   1111\n");
+	gpio_direction_output(rst_gpio, 1);
+	mdelay(100);
+	gpio_direction_output(rst_gpio, 0);
+	mdelay(100);
+	gpio_direction_output(rst_gpio, 1);
+	mdelay(100);	
+	spi_init2();
+	}
+	else
+	{
+	printk("ST7701S_Sleep_out\n");
+	ST7701S_Sleep_out();
+	}
+	#endif
 	return 0;
 }
 
@@ -445,7 +900,17 @@ int rk_disp_pwr_disable(struct rk_lcdc_driver *dev_drv)
 	struct pwr_ctr *pwr_ctr;
 	struct regulator *regulator_lcd = NULL;
 	int count = 10;
-
+	#ifdef LCD_RGB_SPI
+//	gpio_direction_output(rst_gpio, 0);
+	gpio_direction_output(cs_gpio, 0);
+	gpio_direction_output(sdi_gpio, 0);
+	gpio_direction_output(scl_gpio, 0);
+	mdelay(100);
+	#endif
+	
+				printk("ST7701S_Sleep_in\n");
+			ST7701S_Sleep_in();
+			return 0;
 	if (list_empty(&dev_drv->pwrlist_head))
 		return 0;
 	list_for_each(pos, &dev_drv->pwrlist_head) {
@@ -453,8 +918,16 @@ int rk_disp_pwr_disable(struct rk_lcdc_driver *dev_drv)
 					  list);
 		pwr_ctr = &pwr_ctr_list->pwr_ctr;
 		if (pwr_ctr->type == GPIO) {
-			gpio_set_value(pwr_ctr->gpio, !pwr_ctr->atv_val);
+			if(is_first_time_sleep==1)
+			{
+					printk("gpio_set_value(pwr_ctr->gpio, !pwr_ctr->atv_val)\n");
+		//	gpio_set_value(pwr_ctr->gpio, !pwr_ctr->atv_val);
+			}
+
+
+			
 		} else if (pwr_ctr->type == REGULATOR) {
+			printk("disable %s\n", pwr_ctr->rgl_name);
 			if (pwr_ctr->rgl_name)
 				regulator_lcd = regulator_get(NULL, pwr_ctr->rgl_name);
 			if (regulator_lcd == NULL) {
@@ -463,10 +936,20 @@ int rk_disp_pwr_disable(struct rk_lcdc_driver *dev_drv)
 					__func__, pwr_ctr->rgl_name);
 				continue;
 			}
+	/*		if(!regulator_is_enabled(regulator_lcd)){
+			  	regulator_enable(regulator_lcd);
+			}*/
+			//phm
+			if(is_first_time == 0){
+			  is_first_time = 1;
+			 	regulator_enable(regulator_lcd);
+			}
 			while (regulator_is_enabled(regulator_lcd) > 0) {
 				if (regulator_disable(regulator_lcd) == 0 ||
-				    count == 0)
+				    count == 0){
+				    				printk("disable %s\n", pwr_ctr->rgl_name);
 					break;
+				}
 				else
 					dev_err(dev_drv->dev,
 						"regulator_disable failed,count=%d\n",

@@ -701,6 +701,34 @@ Output	:0-write success
 function	:	write data by i2c 
 
 ***********************************************************************************************/
+
+static int vcnl_4200_tx_16data(struct i2c_client *client, char *txData,char *txData1)
+
+{
+	int ret = 0;
+			struct i2c_msg msgs[] = {
+			{
+				.addr	= client->addr,
+				.flags	= 0,
+				.len	= 1,
+				.buf	= txData,
+				.scl_rate = SENSOR_I2C_RATE,
+			},
+			{
+				.addr	= client->addr,
+				.flags	= 0,
+				.len	= 2,
+				.buf	= txData1,
+				.scl_rate = SENSOR_I2C_RATE,
+			},
+		};
+		ret = i2c_transfer(client->adapter, msgs, 2);
+		if (ret < 0)
+			DBG("msg %s i2c read error: %d\n", __func__, ret);
+	}
+
+
+
 int ft5x0x_i2c_Write(char *writebuf, int writelen)
 {
 	int ret;

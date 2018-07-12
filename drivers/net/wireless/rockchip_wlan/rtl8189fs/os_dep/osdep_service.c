@@ -690,7 +690,7 @@ inline struct sk_buff *dbg_rtw_skb_copy(const struct sk_buff *skb, const enum ms
 	rtw_mstat_update(
 		flags
 		, skb_cp ? MSTAT_ALLOC_SUCCESS : MSTAT_ALLOC_FAIL
-		, truesize
+		, cp_truesize
 	);
 
 	return skb_cp;
@@ -712,7 +712,7 @@ inline struct sk_buff *dbg_rtw_skb_clone(struct sk_buff *skb, const enum mstat_f
 	rtw_mstat_update(
 		flags
 		, skb_cl ? MSTAT_ALLOC_SUCCESS : MSTAT_ALLOC_FAIL
-		, truesize
+		, cl_truesize
 	);
 
 	return skb_cl;
@@ -830,7 +830,7 @@ inline void _rtw_memmove(void *dst, const void *src, u32 sz)
 #endif
 }
 
-int	_rtw_memcmp(void *dst, void *src, u32 sz)
+int	_rtw_memcmp(const void *dst, const void *src, u32 sz)
 {
 
 #if defined (PLATFORM_LINUX)|| defined (PLATFORM_FREEBSD)
@@ -1576,27 +1576,15 @@ void rtw_yield_os(void)
 }
 
 #define RTW_SUSPEND_LOCK_NAME "rtw_wifi"
-#define RTW_SUSPEND_EXT_LOCK_NAME "rtw_wifi_ext"
-#define RTW_SUSPEND_RX_LOCK_NAME "rtw_wifi_rx"
 #define RTW_SUSPEND_TRAFFIC_LOCK_NAME "rtw_wifi_traffic"
 #define RTW_SUSPEND_RESUME_LOCK_NAME "rtw_wifi_resume"
-#define RTW_RESUME_SCAN_LOCK_NAME "rtw_wifi_scan"
 #ifdef CONFIG_WAKELOCK
 static struct wake_lock rtw_suspend_lock;
-static struct wake_lock rtw_suspend_ext_lock;
-static struct wake_lock rtw_suspend_rx_lock;
 static struct wake_lock rtw_suspend_traffic_lock;
 static struct wake_lock rtw_suspend_resume_lock;
-static struct wake_lock rtw_resume_scan_lock;
 #elif defined(CONFIG_ANDROID_POWER)
 static android_suspend_lock_t rtw_suspend_lock ={
 	.name = RTW_SUSPEND_LOCK_NAME
-};
-static android_suspend_lock_t rtw_suspend_ext_lock ={
-	.name = RTW_SUSPEND_EXT_LOCK_NAME
-};
-static android_suspend_lock_t rtw_suspend_rx_lock ={
-	.name = RTW_SUSPEND_RX_LOCK_NAME
 };
 static android_suspend_lock_t rtw_suspend_traffic_lock ={
 	.name = RTW_SUSPEND_TRAFFIC_LOCK_NAME
@@ -1604,27 +1592,18 @@ static android_suspend_lock_t rtw_suspend_traffic_lock ={
 static android_suspend_lock_t rtw_suspend_resume_lock ={
 	.name = RTW_SUSPEND_RESUME_LOCK_NAME
 };
-static android_suspend_lock_t rtw_resume_scan_lock ={
-	.name = RTW_RESUME_SCAN_LOCK_NAME
-};
 #endif
 
 inline void rtw_suspend_lock_init(void)
 {
 	#ifdef CONFIG_WAKELOCK
 	wake_lock_init(&rtw_suspend_lock, WAKE_LOCK_SUSPEND, RTW_SUSPEND_LOCK_NAME);
-	wake_lock_init(&rtw_suspend_ext_lock, WAKE_LOCK_SUSPEND, RTW_SUSPEND_EXT_LOCK_NAME);
-	wake_lock_init(&rtw_suspend_rx_lock, WAKE_LOCK_SUSPEND, RTW_SUSPEND_RX_LOCK_NAME);
 	wake_lock_init(&rtw_suspend_traffic_lock, WAKE_LOCK_SUSPEND, RTW_SUSPEND_TRAFFIC_LOCK_NAME);
 	wake_lock_init(&rtw_suspend_resume_lock, WAKE_LOCK_SUSPEND, RTW_SUSPEND_RESUME_LOCK_NAME);
-	wake_lock_init(&rtw_resume_scan_lock, WAKE_LOCK_SUSPEND, RTW_RESUME_SCAN_LOCK_NAME);
 	#elif defined(CONFIG_ANDROID_POWER)
 	android_init_suspend_lock(&rtw_suspend_lock);
-	android_init_suspend_lock(&rtw_suspend_ext_lock);
-	android_init_suspend_lock(&rtw_suspend_rx_lock);
 	android_init_suspend_lock(&rtw_suspend_traffic_lock);
 	android_init_suspend_lock(&rtw_suspend_resume_lock);
-	android_init_suspend_lock(&rtw_resume_scan_lock);
 	#endif
 }
 
@@ -1632,18 +1611,12 @@ inline void rtw_suspend_lock_uninit(void)
 {
 	#ifdef CONFIG_WAKELOCK
 	wake_lock_destroy(&rtw_suspend_lock);
-	wake_lock_destroy(&rtw_suspend_ext_lock);
-	wake_lock_destroy(&rtw_suspend_rx_lock);
 	wake_lock_destroy(&rtw_suspend_traffic_lock);
 	wake_lock_destroy(&rtw_suspend_resume_lock);
-	wake_lock_destroy(&rtw_resume_scan_lock);
 	#elif defined(CONFIG_ANDROID_POWER)
 	android_uninit_suspend_lock(&rtw_suspend_lock);
-	android_uninit_suspend_lock(&rtw_suspend_ext_lock);
-	android_uninit_suspend_lock(&rtw_suspend_rx_lock);
 	android_uninit_suspend_lock(&rtw_suspend_traffic_lock);
 	android_uninit_suspend_lock(&rtw_suspend_resume_lock);
-	android_uninit_suspend_lock(&rtw_resume_scan_lock);
 	#endif
 }
 
@@ -1708,27 +1681,6 @@ inline void rtw_lock_suspend_timeout(u32 timeout_ms)
 	#endif
 }
 
-inline void rtw_lock_ext_suspend_timeout(u32 timeout_ms)
-{
-	#ifdef CONFIG_WAKELOCK
-	wake_lock_timeout(&rtw_suspend_ext_lock, rtw_ms_to_systime(timeout_ms));
-	#elif defined(CONFIG_ANDROID_POWER)
-	android_lock_suspend_auto_expire(&rtw_suspend_ext_lock, rtw_ms_to_systime(timeout_ms));
-	#endif
-	//DBG_871X("EXT lock timeout:%d\n", timeout_ms);
-}
-
-inline void rtw_lock_rx_suspend_timeout(u32 timeout_ms)
-{
-	#ifdef CONFIG_WAKELOCK
-	wake_lock_timeout(&rtw_suspend_rx_lock, rtw_ms_to_systime(timeout_ms));
-	#elif defined(CONFIG_ANDROID_POWER)
-	android_lock_suspend_auto_expire(&rtw_suspend_rx_lock, rtw_ms_to_systime(timeout_ms));
-	#endif
-	//DBG_871X("RX lock timeout:%d\n", timeout_ms);
-}
-
-
 inline void rtw_lock_traffic_suspend_timeout(u32 timeout_ms)
 {
 	#ifdef CONFIG_WAKELOCK
@@ -1737,16 +1689,6 @@ inline void rtw_lock_traffic_suspend_timeout(u32 timeout_ms)
 	android_lock_suspend_auto_expire(&rtw_suspend_traffic_lock, rtw_ms_to_systime(timeout_ms));
 	#endif
 	//DBG_871X("traffic lock timeout:%d\n", timeout_ms);
-}
-
-inline void rtw_lock_resume_scan_timeout(u32 timeout_ms)
-{
-	#ifdef CONFIG_WAKELOCK
-	wake_lock_timeout(&rtw_resume_scan_lock, rtw_ms_to_systime(timeout_ms));
-	#elif defined(CONFIG_ANDROID_POWER)
-	android_lock_suspend_auto_expire(&rtw_resume_scan_lock, rtw_ms_to_systime(timeout_ms));
-	#endif
-	//DBG_871X("resume scan lock:%d\n", timeout_ms);
 }
 
 inline void ATOMIC_SET(ATOMIC_T *v, int i)
@@ -1872,13 +1814,13 @@ inline int ATOMIC_DEC_RETURN(ATOMIC_T *v)
 * @param mode please refer to linux document
 * @return Linux specific error code
 */
-static int openFile(struct file **fpp, char *path, int flag, int mode) 
-{ 
-	struct file *fp; 
- 
-	fp=filp_open(path, flag, mode); 
-	if(IS_ERR(fp)) {
-		*fpp=NULL;
+static int openFile(struct file **fpp, const char *path, int flag, int mode)
+{
+	struct file *fp;
+
+	fp = filp_open(path, flag, mode);
+	if (IS_ERR(fp)) {
+		*fpp = NULL;
 		return PTR_ERR(fp);
 	}
 	else {
@@ -1901,12 +1843,20 @@ static int closeFile(struct file *fp)
 static int readFile(struct file *fp,char *buf,int len) 
 { 
 	int rlen=0, sum=0;
-	
-	if (!fp->f_op || !fp->f_op->read) 
+
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 1, 0))
+	if (!(fp->f_mode & FMODE_CAN_READ))
+#else
+	if (!fp->f_op || !fp->f_op->read)
+#endif
 		return -EPERM;
 
 	while(sum<len) {
-		rlen=fp->f_op->read(fp,buf+sum,len-sum, &fp->f_pos);
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 1, 0))
+		rlen = __vfs_read(fp, buf+sum, len-sum, &fp->f_pos);
+#else
+		rlen = fp->f_op->read(fp, buf+sum, len-sum, &fp->f_pos);
+#endif
 		if(rlen>0)
 			sum+=rlen;
 		else if(0 != rlen)
@@ -1942,10 +1892,11 @@ static int writeFile(struct file *fp,char *buf,int len)
 
 /*
 * Test if the specifi @param path is a file and readable
+* If readable, @param sz is got
 * @param path the path of the file to test
 * @return Linux specific error code
 */
-static int isFileReadable(char *path)
+static int isFileReadable(const char *path, u32 *sz)
 { 
 	struct file *fp;
 	int ret = 0;
@@ -1962,6 +1913,14 @@ static int isFileReadable(char *path)
 		if(1!=readFile(fp, &buf, 1))
 			ret = PTR_ERR(fp);
 		
+		if (ret == 0 && sz) {
+			#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 19, 0))
+			*sz = i_size_read(fp->f_path.dentry->d_inode);
+			#else
+			*sz = i_size_read(fp->f_dentry->d_inode);
+			#endif
+		}
+
 		set_fs(oldfs);
 		filp_close(fp,NULL);
 	}	
@@ -1975,7 +1934,7 @@ static int isFileReadable(char *path)
 * @param sz how many bytes to read at most
 * @return the byte we've read, or Linux specific error code
 */
-static int retriveFromFile(char *path, u8* buf, u32 sz)
+static int retriveFromFile(const char *path, u8 *buf, u32 sz)
 {
 	int ret =-1;
 	mm_segment_t oldfs;
@@ -2009,7 +1968,7 @@ static int retriveFromFile(char *path, u8* buf, u32 sz)
 * @param sz how many bytes to write at most
 * @return the byte we've written, or Linux specific error code
 */
-static int storeToFile(char *path, u8* buf, u32 sz)
+static int storeToFile(const char *path, u8 *buf, u32 sz)
 {
 	int ret =0;
 	mm_segment_t oldfs;
@@ -2042,15 +2001,34 @@ static int storeToFile(char *path, u8* buf, u32 sz)
 * @param path the path of the file to test
 * @return _TRUE or _FALSE
 */
-int rtw_is_file_readable(char *path)
+int rtw_is_file_readable(const char *path)
 {
 #ifdef PLATFORM_LINUX
-	if(isFileReadable(path) == 0)
+	if (isFileReadable(path, NULL) == 0)
 		return _TRUE;
 	else
 		return _FALSE;
 #else
 	//Todo...
+	return _FALSE;
+#endif
+}
+
+/*
+* Test if the specifi @param path is a file and readable.
+* If readable, @param sz is got
+* @param path the path of the file to test
+* @return _TRUE or _FALSE
+*/
+int rtw_is_file_readable_with_size(const char *path, u32 *sz)
+{
+#ifdef PLATFORM_LINUX
+	if (isFileReadable(path, sz) == 0)
+		return _TRUE;
+	else
+		return _FALSE;
+#else
+	/* Todo... */
 	return _FALSE;
 #endif
 }
@@ -2062,7 +2040,7 @@ int rtw_is_file_readable(char *path)
 * @param sz how many bytes to read at most
 * @return the byte we've read
 */
-int rtw_retrieve_from_file(char *path, u8 *buf, u32 sz)
+int rtw_retrieve_from_file(const char *path, u8 *buf, u32 sz)
 {
 #ifdef PLATFORM_LINUX
 	int ret =retriveFromFile(path, buf, sz);
@@ -2080,7 +2058,7 @@ int rtw_retrieve_from_file(char *path, u8 *buf, u32 sz)
 * @param sz how many bytes to write at most
 * @return the byte we've written
 */
-int rtw_store_to_file(char *path, u8* buf, u32 sz)
+int rtw_store_to_file(const char *path, u8 *buf, u32 sz)
 {
 #ifdef PLATFORM_LINUX
 	int ret =storeToFile(path, buf, sz);
@@ -2484,6 +2462,137 @@ struct rtw_cbuf *rtw_cbuf_alloc(u32 size)
 void rtw_cbuf_free(struct rtw_cbuf *cbuf)
 {
 	rtw_mfree((u8*)cbuf, sizeof(*cbuf) + sizeof(void*)*cbuf->size);
+}
+
+/**
+ * map_readN - read a range of map data
+ * @map: map to read
+ * @offset: start address to read
+ * @len: length to read
+ * @buf: pointer of buffer to store data read
+ *
+ * Returns: _SUCCESS or _FAIL
+ */
+int map_readN(const struct map_t *map, u16 offset, u16 len, u8 *buf)
+{
+	const struct map_seg_t *seg;
+	int ret = _FAIL;
+	int i;
+
+	if (len == 0) {
+		rtw_warn_on(1);
+		goto exit;
+	}
+
+	if (offset + len > map->len) {
+		rtw_warn_on(1);
+		goto exit;
+	}
+
+	_rtw_memset(buf, map->init_value, len);
+
+	for (i = 0; i < map->seg_num; i++) {
+		u8 *c_dst, *c_src;
+		u16 c_len;
+
+		seg = map->segs + i;
+		if (seg->sa + seg->len <= offset || seg->sa >= offset + len)
+			continue;
+
+		if (seg->sa >= offset) {
+			c_dst = buf + (seg->sa - offset);
+			c_src = seg->c;
+			if (seg->sa + seg->len <= offset + len)
+				c_len = seg->len;
+			else
+				c_len = offset + len - seg->sa;
+		} else {
+			c_dst = buf;
+			c_src = seg->c + (offset - seg->sa);
+			if (seg->sa + seg->len >= offset + len)
+				c_len = len;
+			else
+				c_len = seg->sa + seg->len - offset;
+		}
+			
+		_rtw_memcpy(c_dst, c_src, c_len);
+	}
+
+exit:
+	return ret;
+}
+
+/**
+ * map_read8 - read 1 byte of map data
+ * @map: map to read
+ * @offset: address to read
+ *
+ * Returns: value of data of specified offset. map.init_value if offset is out of range
+ */
+u8 map_read8(const struct map_t *map, u16 offset)
+{
+	const struct map_seg_t *seg;
+	u8 val = map->init_value;
+	int i;
+
+	if (offset + 1 > map->len) {
+		rtw_warn_on(1);
+		goto exit;
+	}
+
+	for (i = 0; i < map->seg_num; i++) {
+		seg = map->segs + i;
+		if (seg->sa + seg->len <= offset || seg->sa >= offset + 1)
+			continue;
+
+		val = *(seg->c + offset - seg->sa);
+		break;
+	}
+
+exit:
+	return val;
+}
+
+/**
+* is_null -
+*
+* Return	TRUE if c is null character
+*		FALSE otherwise.
+*/
+inline BOOLEAN is_null(char c)
+{
+	if (c == '\0')
+		return _TRUE;
+	else
+		return _FALSE;
+}
+
+/**
+* is_eol -
+*
+* Return	TRUE if c is represent for EOL (end of line)
+*		FALSE otherwise.
+*/
+inline BOOLEAN is_eol(char c)
+{
+	if (c == '\r' || c == '\n')
+		return _TRUE;
+	else
+		return _FALSE;
+}
+
+/**
+* is_space -
+*
+* Return	TRUE if c is represent for space
+*		FALSE otherwise.
+*/
+inline BOOLEAN is_space(char c)
+{
+	if (c == ' ' || c == '\t')
+		return _TRUE;
+	else
+		return _FALSE;
 }
 
 /**

@@ -2230,6 +2230,13 @@ _func_enter_;
 	}
 	#endif
 
+#ifdef CONFIG_LPS_LCLK
+	_cancel_workitem_sync(&pwrctrlpriv->cpwm_event);
+	#ifdef CONFIG_LPS_RPWM_TIMER
+	_cancel_workitem_sync(&pwrctrlpriv->rpwmtimeoutwi);
+	#endif
+#endif /* CONFIG_LPS_LCLK */
+
 #ifdef CONFIG_WOWLAN
 #ifdef CONFIG_PNO_SUPPORT
 	if (pwrctrlpriv->pnlo_info != NULL)

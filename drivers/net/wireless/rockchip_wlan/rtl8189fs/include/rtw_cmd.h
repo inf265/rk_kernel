@@ -238,6 +238,8 @@ enum rtw_drvextra_cmd_id
 	DFS_MASTER_WK_CID,
 	SESSION_TRACKER_WK_CID,
 	EN_HW_UPDATE_TSF_WK_CID,
+	MP_CMD_WK_CID,
+	CUSTOMER_STR_WK_CID,
 	MAX_WK_CID
 };
 
@@ -1039,7 +1041,7 @@ extern u8 rtw_setstakey_cmd(_adapter  *padapter, struct sta_info *sta, u8 key_ty
 extern u8 rtw_clearstakey_cmd(_adapter *padapter, struct sta_info *sta, u8 enqueue);
 
 extern u8 rtw_joinbss_cmd(_adapter  *padapter, struct wlan_network* pnetwork);
-u8 rtw_disassoc_cmd(_adapter *padapter, u32 deauth_timeout_ms, bool enqueue);
+u8 rtw_disassoc_cmd(_adapter *padapter, u32 deauth_timeout_ms, int flags);
 extern u8 rtw_setopmode_cmd(_adapter  *padapter, NDIS_802_11_NETWORK_INFRASTRUCTURE networktype, bool enqueue);
 extern u8 rtw_setdatarate_cmd(_adapter  *padapter, u8 *rateset);
 extern u8 rtw_setbasicrate_cmd(_adapter  *padapter, u8 *rateset);
@@ -1112,11 +1114,18 @@ extern u8 rtw_led_blink_cmd(_adapter*padapter, PVOID pLed);
 extern u8 rtw_set_csa_cmd(_adapter*padapter, u8 new_ch_no);
 extern u8 rtw_tdls_cmd(_adapter*padapter, u8 *addr, u8 option);
 
+u8 rtw_mp_cmd(_adapter *adapter, u8 mp_cmd_id, u8 flags);
+
 //#ifdef CONFIG_C2H_PACKET_EN
 extern u8 rtw_c2h_packet_wk_cmd(PADAPTER padapter, u8 *pbuf, u16 length);
 //#else
 extern u8 rtw_c2h_wk_cmd(PADAPTER padapter, u8 *c2h_evt);
 //#endif
+
+#ifdef CONFIG_RTW_CUSTOMER_STR
+u8 rtw_customer_str_req_cmd(_adapter *adapter);
+u8 rtw_customer_str_write_cmd(_adapter *adapter, const u8 *cstr);
+#endif
 
 u8 rtw_run_in_thread_cmd(PADAPTER padapter, void (*func)(void*), void* context);
 

@@ -16,7 +16,7 @@
  *
  * VERSION      	DATE			AUTHOR
  *  1.0		    2015-10-12		    Tim
- *
+ * 
  * note: only support mulititouch
  */ 
 
@@ -177,7 +177,7 @@ static int cst2xx_init(struct hyn_ts *ts)
 	ts->irq = of_get_named_gpio_flags(np, "touch-gpio", 0, (enum of_gpio_flags *)&irq_flags);
 	ts->rst = of_get_named_gpio_flags(np, "reset-gpio", 0, &rst_flags);
 		
-	//msleep(20);
+	//mdelay(20);
 	#if defined (CONFIG_BOARD_ZM71C)||defined (CONFIG_BOARD_ZM72CP)||defined (CONFIG_BOARD_ZM726C)||defined (CONFIG_BOARD_ZM726CE) || defined(CONFIG_BOARD_TYPE_ZM726CE_CK)||defined (CONFIG_BOARD_ZM72CP_NEW)
 	        if(gpio_request(ts->rst,NULL) != 0){
                gpio_free(ts->rst);
@@ -194,7 +194,7 @@ static int cst2xx_init(struct hyn_ts *ts)
 	}
 	gpio_direction_output(WAKE_PORT, 0);
 	gpio_set_value(WAKE_PORT,GPIO_HIGH);
-	msleep(20);
+	mdelay(20);
 
 	if(gpio_request(IRQ_PORT,NULL) != 0){
 		gpio_free(IRQ_PORT);
@@ -203,8 +203,8 @@ static int cst2xx_init(struct hyn_ts *ts)
 	}
 	gpio_pull_updown(IRQ_PORT, 1);
 
-	msleep(20);*/
-	msleep(20);
+	mdelay(20);*/
+	mdelay(20);
 	
 	return 0;
 }
@@ -228,7 +228,7 @@ xfer_msg[1].scl_rate=300*1000;
   
 	if (reg < 0x80) {
 		i2c_transfer(client->adapter, xfer_msg, ARRAY_SIZE(xfer_msg));
-		msleep(5);
+		mdelay(5);
 	}
 
 	return i2c_transfer(client->adapter, xfer_msg, ARRAY_SIZE(xfer_msg)) == ARRAY_SIZE(xfer_msg) ? 0 : -EFAULT;
@@ -332,7 +332,7 @@ static void soft_reset_chip(struct i2c_client *client)
 	buf[1] = 0x02;
 	cst2xx_i2c_write(client, buf, 2);
 	
-	msleep(50);
+	mdelay(50);
 }
 #endif
 
@@ -340,11 +340,11 @@ static void hard_reset_chip(struct hyn_ts *ts, u16 ms)
 {
 	 if(h_wake_pin != 0) {
          gpio_direction_output(ts->rst_pin, 0);
-    	 msleep(10);
+    	 mdelay(10);
     	 gpio_direction_output(ts->rst_pin, 1);
 	 }
 	 
-     msleep(ms); 
+     mdelay(ms); 
 }
 
 
@@ -449,7 +449,7 @@ static int hyn_config_write_proc(struct file *file, const char *buffer, unsigned
 	}
 	else if('e'==temp_buf[0]&&'n'==temp_buf[1])//end //en
 	{
-		msleep(20);
+		mdelay(20);
 		reset_chip(ts->client);
 		startup_chip(ts->client);
 		hyn_proc_flag = 0;
@@ -671,14 +671,14 @@ static int cst2xx_read_checksum(struct hyn_ts *ts)
 		buf[1] = 0x00;
 		ret = cst2xx_i2c_read_register(ts->client, buf, 1);
 		if(ret < 0) {
-			msleep(2);
+			mdelay(2);
 			continue;
 		}
 
 		if((buf[0]==0x01) || (buf[0]==0x02))
 			break;
 
-		msleep(2);
+		mdelay(2);
 	}
 
 	if((buf[0]==0x01) || (buf[0]==0x02)) {
@@ -724,11 +724,11 @@ static int cst2xx_update_firmware(struct i2c_client * client, struct hyn_ts *ts,
 	retry = 0;
 	
 start_flow:
-	//disable i2c irq
-	//if (g_ts_data->use_irq)
-	//	cst2xx_irq_disable(g_ts_data);
 
 	printk("hyn enter the update firmware.\r\n");
+    disable_irq(ts->irq);
+     
+	mdelay(10);
 
 	ret = cst2xx_enter_download_mode(ts);
 	if (ret < 0) {
@@ -750,11 +750,10 @@ start_flow:
 		goto fail_retry;
 	}
 	
-	//enable i2c irq
-	//if (g_ts_data->use_irq)
-	//	cst2xx_irq_enable(g_ts_data);
-
 	printk("hyn Download firmware succesfully.\r\n");
+	hard_reset_chip(ts, 20);
+	mdelay(20);
+	enable_irq(ts->irq);
 
 	return 0;
 	
@@ -791,12 +790,20 @@ static int cst2xx_check_code(struct hyn_ts *ts)
 //return -1;
  //  }
 	if((buf[0]==226)||(buf[0]==237)||(buf[0]==240)) {
+		printk("hyn check sucess. buf[0]:%d.\n", buf[0]);
 		return 0;
 	}
 	else {
 		printk("hyn check sum code error. buf[0]:%d.\n", buf[0]);
+		
 		ret = cst2xx_boot_update_fw(ts->client, ts);
-		if(ret<0) return -2;
+		if(ret<0) 
+		{	
+			hard_reset_chip(ts,10);
+			mdelay(20);
+			enable_irq(ts->irq);
+			return -2;
+		}
 		else      return  0;
 	}	
 }
@@ -1373,7 +1380,7 @@ static int hyn_ts_suspend(struct device *dev)
 	}
 
 #ifdef SLEEP_CLEAR_POINT
-	msleep(10); 		
+	mdelay(10); 		
 	#ifdef ICS_SLOT_REPORT
 	for(i=1; i<=MAX_CONTACTS; i++) {	
 		input_mt_slot(ts->input, i);
@@ -1384,7 +1391,7 @@ static int hyn_ts_suspend(struct device *dev)
 	input_mt_sync(ts->input);
 	#endif
 	input_sync(ts->input);
-	//msleep(10); 	
+	//mdelay(10); 	
 	//report_data(ts, 1, 1, 10, 1);		
 	//input_sync(ts->input);	
 #endif	
@@ -1408,12 +1415,6 @@ static int hyn_ts_resume(struct device *dev)
 	axp_gpio_set_value(PMU_GPIO_NUM,1);
 #endif
 
-	//cst2xx_shutdown_high(ts);
-	//msleep(20); 	
-	//reset_chip(ts->client);
-	//startup_chip(ts->client);
-	//check_mem_data(ts->client,ts);
-
 	hard_reset_chip(ts, 30);
 
 #ifdef SLEEP_CLEAR_POINT
@@ -1433,7 +1434,7 @@ static int hyn_ts_resume(struct device *dev)
 	printk( "hyn_ts_resume () : queue hyn_monitor_work\n");
 	queue_delayed_work(hyn_monitor_workqueue, &ts->hyn_monitor_work, 300);
 #endif	
-	msleep(20); 	
+	mdelay(20); 	
     rc = cst2xx_check_code(ts);
 	if(rc < 0){
 		printk("hyn check code error.\n");
@@ -1444,7 +1445,7 @@ static int hyn_ts_resume(struct device *dev)
 	buf[1] = 0x06;
 	rc = cst2xx_i2c_write(ts->client, buf, 2);
 
-	msleep(100);
+	mdelay(100);
 
 	//disable_irq_nosync(ts->irq);
 	enable_irq(ts->irq);
@@ -1524,7 +1525,7 @@ static int  hyn_ts_probe(struct i2c_client *client,
 		{
 		    h_wake_pin = ts->rst_pin;
 		}
-		//msleep(100);
+		//mdelay(100);
 	} else {
 		dev_info(&client->dev, "wake pin invalid\n");
 	}
@@ -1539,21 +1540,14 @@ static int  hyn_ts_probe(struct i2c_client *client,
 		dev_info(&client->dev, "irq pin invalid\n");
 	}
 
+    mdelay(40);	 //runing
 	rc = cst2xx_test_i2c(client);
 	if (rc < 0) {
 		dev_err(&client->dev, "hyn cst2xx test iic error.\n");
 		return rc;
-	}	
-
-    #if 0
-	rc = cst2xx_boot_update_fw(client, ts);
-	if(rc < 0){
-		printk("hyn update fw failed.\n");
-		return rc;
 	}
-	#endif
 
-    msleep(40);	 //runing
+    mdelay(60);	 //runing
 	
     rc = cst2xx_check_code(ts);
 	if(rc < 0){

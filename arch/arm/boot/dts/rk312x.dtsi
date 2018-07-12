@@ -140,6 +140,13 @@
 		map-exec;
 		map-cacheable;
 	};
+	
+	
+	hy_motor {
+        compatible = "hy_motor";
+		status = "okay";	
+	};
+	
 
 	timer {
 		compatible = "arm,armv7-timer";

@@ -87,6 +87,12 @@ int rtw_ack_policy = NORMAL_ACK;
 
 int rtw_mp_mode = 0;
 
+#if defined(CONFIG_MP_INCLUDED) && defined(CONFIG_RTW_CUSTOMER_STR)
+uint rtw_mp_customer_str = 0;
+module_param(rtw_mp_customer_str, uint, 0644);
+MODULE_PARM_DESC(rtw_mp_customer_str, "Whether or not to enable customer str support on MP mode");
+#endif
+
 int rtw_software_encrypt = 0;
 int rtw_software_decrypt = 0;
 
@@ -104,6 +110,11 @@ int rtw_rfkfree_enable = 2; /* disable kfree */
 #else
 int rtw_rfkfree_enable = 0; /* Default Enalbe kfree by efuse config */
 #endif
+
+uint rtw_tx_bw_mode = 0x21;
+module_param(rtw_tx_bw_mode, uint, 0644);
+MODULE_PARM_DESC(rtw_tx_bw_mode, "The max tx bw for 2.4G and 5G. format is the same as rtw_bw_mode");
+
 #ifdef CONFIG_80211N_HT
 int rtw_ht_enable = 1;
 // 0: 20 MHz, 1: 40 MHz, 2: 80 MHz, 3: 160MHz, 4: 80+80MHz
@@ -438,27 +449,13 @@ uint rtw_pll_ref_clk_sel = CONFIG_RTW_PLL_REF_CLK_SEL;
 module_param(rtw_pll_ref_clk_sel, uint, 0644);
 MODULE_PARM_DESC(rtw_pll_ref_clk_sel, "force pll_ref_clk_sel, 0xF:use autoload value");
 
-#if defined(CONFIG_CALIBRATE_TX_POWER_BY_REGULATORY) //eFuse: Regulatory selection=1
-int rtw_tx_pwr_lmt_enable = 1;
-int rtw_tx_pwr_by_rate = 1;
-#elif defined(CONFIG_CALIBRATE_TX_POWER_TO_MAX)//eFuse: Regulatory selection=0
-int rtw_tx_pwr_lmt_enable = 0;
-int rtw_tx_pwr_by_rate = 1;
-#else //eFuse: Regulatory selection=2
-#ifdef CONFIG_PCI_HCI
-int rtw_tx_pwr_lmt_enable = 2; // 2- Depend on efuse
-int rtw_tx_pwr_by_rate = 2;// 2- Depend on efuse
-#else // USB & SDIO
-int rtw_tx_pwr_lmt_enable = 0;
-int rtw_tx_pwr_by_rate = 0;
-#endif 
-#endif
+int rtw_tx_pwr_by_rate = CONFIG_TXPWR_BY_RATE_EN;
+module_param(rtw_tx_pwr_by_rate, int, 0644);
+MODULE_PARM_DESC(rtw_tx_pwr_by_rate, "0:Disable, 1:Enable, 2: Depend on efuse");
 
+int rtw_tx_pwr_lmt_enable = CONFIG_TXPWR_LIMIT_EN;
 module_param(rtw_tx_pwr_lmt_enable, int, 0644);
 MODULE_PARM_DESC(rtw_tx_pwr_lmt_enable,"0:Disable, 1:Enable, 2: Depend on efuse");
-
-module_param(rtw_tx_pwr_by_rate, int, 0644);
-MODULE_PARM_DESC(rtw_tx_pwr_by_rate,"0:Disable, 1:Enable, 2: Depend on efuse");
 
 static int rtw_target_tx_pwr_2g_a[RATE_SECTION_NUM] = CONFIG_RTW_TARGET_TX_PWR_2G_A;
 static int rtw_target_tx_pwr_2g_a_num = 0;
@@ -612,6 +609,9 @@ _func_enter_;
   	//registry_par->qos_enable = (u8)rtw_qos_enable;
 	registry_par->ack_policy = (u8)rtw_ack_policy;
 	registry_par->mp_mode = (u8)rtw_mp_mode;
+#if defined(CONFIG_MP_INCLUDED) && defined(CONFIG_RTW_CUSTOMER_STR)
+	registry_par->mp_customer_str = (u8)rtw_mp_customer_str;
+#endif
 	registry_par->software_encrypt = (u8)rtw_software_encrypt;
 	registry_par->software_decrypt = (u8)rtw_software_decrypt;
 
@@ -629,6 +629,8 @@ _func_enter_;
 
 	registry_par->RegRfKFreeEnable = (u8)rtw_rfkfree_enable;
 	
+	registry_par->tx_bw_mode = (u8)rtw_tx_bw_mode;
+
 #ifdef CONFIG_80211N_HT
 	registry_par->ht_enable = (u8)rtw_ht_enable;
 	registry_par->bw_mode = (u8)rtw_bw_mode;
@@ -1377,9 +1379,11 @@ u32 rtw_start_drv_threads(_adapter *padapter)
 #endif //#ifdef CONFIG_XMIT_THREAD_MODE
 
 #ifdef CONFIG_RECV_THREAD_MODE
-	padapter->recvThread = kthread_run(rtw_recv_thread, padapter, "RTW_RECV_THREAD");
-	if(IS_ERR(padapter->recvThread))
-		_status = _FAIL;
+	if (is_primary_adapter(padapter)) {
+		padapter->recvThread = kthread_run(rtw_recv_thread, padapter, "RTW_RECV_THREAD");
+		if (IS_ERR(padapter->recvThread))
+			_status = _FAIL;
+	}
 #endif
 
 	if (is_primary_adapter(padapter)) {
@@ -1430,10 +1434,11 @@ void rtw_stop_drv_threads (_adapter *padapter)
 #endif
 
 #ifdef CONFIG_RECV_THREAD_MODE
-	// Below is to termindate rx_thread...
-	_rtw_up_sema(&padapter->recvpriv.recv_sema);
-	_rtw_down_sema(&padapter->recvpriv.terminate_recvthread_sema);
-	RT_TRACE(_module_os_intfs_c_,_drv_info_,("\n drv_halt:recv_thread can be terminated! \n"));
+	if (is_primary_adapter(padapter)) {
+		/* Below is to termindate rx_thread... */
+		_rtw_up_sema(&padapter->recvpriv.recv_sema);
+		_rtw_down_sema(&padapter->recvpriv.terminate_recvthread_sema);
+	}
 #endif
 
 	rtw_hal_stop_thread(padapter);
@@ -1512,6 +1517,9 @@ u8 rtw_init_default_value(_adapter *padapter)
 	//for debug purpose
 	padapter->fix_rate = 0xFF;
 	padapter->data_fb = 0;
+
+	padapter->driver_tx_bw_mode = pregistrypriv->tx_bw_mode;
+
 	padapter->driver_ampdu_spacing = 0xFF;
 	padapter->driver_rx_ampdu_factor =  0xFF;
 	padapter->driver_rx_ampdu_spacing = 0xFF;
@@ -1539,8 +1547,14 @@ struct dvobj_priv *devobj_init(void)
 	_rtw_mutex_init(&pdvobj->h2c_fwcmd_mutex);
 	_rtw_mutex_init(&pdvobj->setch_mutex);
 	_rtw_mutex_init(&pdvobj->setbw_mutex);
+	_rtw_mutex_init(&pdvobj->rf_read_reg_mutex);
 #ifdef CONFIG_SDIO_INDIRECT_ACCESS
 	_rtw_mutex_init(&pdvobj->sd_indirect_access_mutex);
+#endif
+
+#ifdef CONFIG_RTW_CUSTOMER_STR
+	_rtw_mutex_init(&pdvobj->customer_str_mutex);
+	_rtw_memset(pdvobj->customer_str, 0xFF, RTW_CUSTOMER_STR_LEN);
 #endif
 
 	pdvobj->processing_dev_remove = _FALSE;
@@ -1567,8 +1581,14 @@ void devobj_deinit(struct dvobj_priv *pdvobj)
 
 	_rtw_mutex_free(&pdvobj->hw_init_mutex);
 	_rtw_mutex_free(&pdvobj->h2c_fwcmd_mutex);
+
+#ifdef CONFIG_RTW_CUSTOMER_STR
+	_rtw_mutex_free(&pdvobj->customer_str_mutex);
+#endif
+
 	_rtw_mutex_free(&pdvobj->setch_mutex);
 	_rtw_mutex_free(&pdvobj->setbw_mutex);
+	_rtw_mutex_free(&pdvobj->rf_read_reg_mutex);
 #ifdef CONFIG_SDIO_INDIRECT_ACCESS
 	_rtw_mutex_free(&pdvobj->sd_indirect_access_mutex);
 #endif
@@ -1830,6 +1850,11 @@ void rtw_cancel_all_timer(_adapter *padapter)
 #ifdef CONFIG_NEW_SIGNAL_STAT_PROCESS
 	_cancel_timer_ex(&padapter->recvpriv.signal_stat_timer);
 #endif
+
+#ifdef CONFIG_LPS_RPWM_TIMER
+	_cancel_timer_ex(&(adapter_to_pwrctl(padapter)->pwr_rpwm_timer));
+#endif
+
 	//cancel dm timer
 	rtw_hal_dm_deinit(padapter);
 
@@ -2999,9 +3024,9 @@ static int netdev_close(struct net_device *pnetdev)
 #ifndef CONFIG_ANDROID
 		//s2.
 		LeaveAllPowerSaveMode(padapter);
-		rtw_disassoc_cmd(padapter, 500, _FALSE);
+		rtw_disassoc_cmd(padapter, 500, RTW_CMDF_DIRECTLY);
 		//s2-2.  indicate disconnect to os
-		rtw_indicate_disconnect(padapter);
+		rtw_indicate_disconnect(padapter, 0, _FALSE);
 		//s2-3.
 		rtw_free_assoc_resources(padapter, 1);
 		//s2-4.
@@ -3213,7 +3238,11 @@ restart:
 #endif
 
 		oldfs = get_fs(); set_fs(KERNEL_DS);
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 7, 0))
+		err = sock_recvmsg(sock, &msg, MSG_DONTWAIT);
+#else
 		err = sock_recvmsg(sock, &msg, PAGE_SIZE, MSG_DONTWAIT);
+#endif
 		set_fs(oldfs);
 
 		if (err < 0)
@@ -3500,11 +3529,10 @@ int rtw_suspend_free_assoc_resource(_adapter *padapter)
 		}
 	}
 
-	if(check_fwstate(pmlmepriv, WIFI_STATION_STATE) && check_fwstate(pmlmepriv, _FW_LINKED))
-	{	
-		rtw_disassoc_cmd(padapter, 0, _FALSE);	
-		//s2-2.  indicate disconnect to os
-		rtw_indicate_disconnect(padapter);
+	if (check_fwstate(pmlmepriv, WIFI_STATION_STATE) && check_fwstate(pmlmepriv, _FW_LINKED)) {
+		rtw_disassoc_cmd(padapter, 0, RTW_CMDF_DIRECTLY);
+		/* s2-2.  indicate disconnect to os */
+		rtw_indicate_disconnect(padapter, 0, _FALSE);
 	}
 	#ifdef CONFIG_AP_MODE
 	else if(check_fwstate(pmlmepriv, WIFI_AP_STATE))	
@@ -3531,7 +3559,7 @@ int rtw_suspend_free_assoc_resource(_adapter *padapter)
 	if (check_fwstate(pmlmepriv, _FW_UNDER_LINKING) == _TRUE)
 	{
 		DBG_871X_LEVEL(_drv_always_, "%s: fw_under_linking\n", __FUNCTION__);
-		rtw_indicate_disconnect(padapter);
+		rtw_indicate_disconnect(padapter, 0, _FALSE);
 	}
 	
 	DBG_871X("<== "FUNC_ADPT_FMT" exit....\n", FUNC_ADPT_ARG(padapter));
@@ -3579,8 +3607,7 @@ int rtw_suspend_wow(_adapter *padapter)
 		rtw_set_drv_stopped(padapter);	/*for stop thread*/
 		rtw_stop_drv_threads(padapter);
 		#ifdef CONFIG_CONCURRENT_MODE	
-		if (rtw_buddy_adapter_up(padapter))
-			rtw_stop_drv_threads(padapter->pbuddy_adapter);
+		rtw_stop_drv_threads(padapter->pbuddy_adapter);
 		#endif /*CONFIG_CONCURRENT_MODE*/
 		rtw_clr_drv_stopped(padapter);	/*for 32k command*/
 
@@ -4102,7 +4129,7 @@ _func_enter_;
 
 			DBG_871X("%s: disconnect reason: %02x\n", __func__,
 						pwrpriv->wowlan_wake_reason);
-			rtw_indicate_disconnect(padapter);
+			rtw_indicate_disconnect(padapter, 0, _FALSE);
 
 			rtw_sta_media_status_rpt(padapter,
 				rtw_get_stainfo(&padapter->stapriv,
@@ -4117,22 +4144,10 @@ _func_enter_;
 		}
 	}
 
-	if (pwrpriv->wowlan_wake_reason == FWDecisionDisconnect) {
-		rtw_lock_ext_suspend_timeout(2000);
-	}
-
-	if (pwrpriv->wowlan_wake_reason == Rx_GTK ||
-		pwrpriv->wowlan_wake_reason == Rx_DisAssoc ||
-		pwrpriv->wowlan_wake_reason == Rx_DeAuth) {
-		rtw_lock_ext_suspend_timeout(8000);
-	}
-
 	if (pwrpriv->wowlan_wake_reason == RX_PNOWakeUp) {
-#ifdef CONFIG_IOCTL_CFG80211	
-		cfg80211_disconnected(padapter->pnetdev, 0, NULL, 0,
-				GFP_ATOMIC);
-#endif
-		rtw_lock_ext_suspend_timeout(10000);
+		#ifdef CONFIG_IOCTL_CFG80211
+		rtw_cfg80211_disconnected(padapter->rtw_wdev, 0, NULL, 0, 1, GFP_ATOMIC);
+		#endif
 	}
 
 	if (pwrpriv->wowlan_mode == _TRUE) {
@@ -4279,9 +4294,6 @@ _func_enter_;
 	#ifdef CONFIG_RESUME_IN_WORKQUEUE
 	//rtw_unlock_suspend();
 	#endif //CONFIG_RESUME_IN_WORKQUEUE
-
-	if (pwrpriv->wowlan_wake_reason == AP_WakeUp)
-		rtw_lock_ext_suspend_timeout(8000);
 
 	pwrpriv->bips_processing = _FALSE;
 	_set_timer(&padapter->mlmepriv.dynamic_chk_timer, 2000);

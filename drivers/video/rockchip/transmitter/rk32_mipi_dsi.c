@@ -251,7 +251,7 @@ static int rk312x_mipi_dsi_phy_set_gotp(struct dsi *dsi, u32 offset, int n)
 	u32 Ttxbyte_clk = dsi->phy.Ttxbyte_clk;
 	u32 Tsys_clk = dsi->phy.Tsys_clk;
 	u32 Ttxclkesc = dsi->phy.Ttxclkesc;
-	printk("%s : ddr_clk %d\n", __func__, ddr_clk);
+	MIPI_DBG("%s : ddr_clk %d\n", __func__, ddr_clk);
 	switch (offset) {
 	case DPHY_CLOCK_OFFSET:
 		MIPI_DBG("******set DPHY_CLOCK_OFFSET gotp******\n");
@@ -294,7 +294,7 @@ static int rk312x_mipi_dsi_phy_set_gotp(struct dsi *dsi, u32 offset, int n)
 		val = 9;
 	else if (ddr_clk <= 1000 * MHz)
 		val = 10;
-	printk("%s reg_ths_settle = 0x%x\n", __func__, val);
+	MIPI_DBG("%s reg_ths_settle = 0x%x\n", __func__, val);
 	rk32_dsi_set_bits(dsi, val, reg_ths_settle + offset);
 
 	if (ddr_clk < 110 * MHz)
@@ -319,7 +319,7 @@ static int rk312x_mipi_dsi_phy_set_gotp(struct dsi *dsi, u32 offset, int n)
 		val = 0x21;
 	else if (ddr_clk <= 1000 * MHz)
 		val = 0x09;
-	printk("%s reg_hs_ths_prepare = 0x%x\n", __func__, val);
+	MIPI_DBG("%s reg_hs_ths_prepare = 0x%x\n", __func__, val);
 	rk32_dsi_set_bits(dsi, val, reg_hs_ths_prepare + offset);
 
 	if (offset != DPHY_CLOCK_OFFSET) {
@@ -369,7 +369,7 @@ static int rk312x_mipi_dsi_phy_set_gotp(struct dsi *dsi, u32 offset, int n)
 		else if (ddr_clk <= 1000 * MHz)
 			val = 0x20;
 	}
-	printk("%s reg_hs_the_zero = 0x%x\n", __func__, val);
+	MIPI_DBG("%s reg_hs_the_zero = 0x%x\n", __func__, val);
 	rk32_dsi_set_bits(dsi, val, reg_hs_the_zero + offset);
 
 	if (ddr_clk < 110 * MHz)
@@ -395,7 +395,7 @@ static int rk312x_mipi_dsi_phy_set_gotp(struct dsi *dsi, u32 offset, int n)
 	else if (ddr_clk <= 1000 * MHz)
 		val = 0x21;	/* 0x27 */
 
-	printk("%s reg_hs_ths_trail = 0x%x\n", __func__, val);
+	MIPI_DBG("%s reg_hs_ths_trail = 0x%x\n", __func__, val);
 
 	rk32_dsi_set_bits(dsi, val, reg_hs_ths_trail + offset);
 	val = 120000 / Ttxbyte_clk + 1;

@@ -29,6 +29,9 @@ module_param(debug, int, S_IRUGO|S_IWUSR);
 #define SENSOR_720P_FPS 					 30000
 #define SENSOR_1080P_FPS					 15000
 
+//#define CAMERA_MIRROR_CTRL //phm add MIRROR
+#define CAMERA_REVERSAL
+
 #define SENSOR_REGISTER_LEN 				 2		   // sensor register address bytes
 #define SENSOR_VALUE_LEN					 2		   // sensor register value bytes
 									

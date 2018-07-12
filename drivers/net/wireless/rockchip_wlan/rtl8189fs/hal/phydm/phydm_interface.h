@@ -262,6 +262,17 @@ ODM_GetRFReg(
 	IN	u4Byte				BitMask
 	);
 
+#define odm_get_bb_reg(odm, reg_addr, bit_mask) \
+	ODM_GetBBReg(odm, reg_addr, bit_mask)
+
+#define odm_set_bb_reg(odm, reg_addr, bit_mask, data) \
+	ODM_SetBBReg(odm, reg_addr, bit_mask, data)
+
+#define odm_get_rf_reg(odm, e_rf_path, reg_addr, bit_mask) \
+	ODM_GetRFReg(odm, e_rf_path, reg_addr, bit_mask)
+
+#define odm_set_rf_reg(odm, e_rf_path, reg_addr, bit_mask, data) \
+	ODM_SetRFReg(odm, e_rf_path, reg_addr, bit_mask, data)
 
 //
 // Memory Relative Function.

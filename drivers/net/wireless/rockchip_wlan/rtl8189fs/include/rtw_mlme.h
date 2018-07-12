@@ -524,9 +524,6 @@ struct mlme_priv {
 
 	u8	*nic_hdl;
 
-	#ifdef SUPPLICANT_RTK_VERSION_LOWER_THAN_JB42
-	u8	not_indic_disco;
-	#endif
 	_list		*pscanned;
 	_queue	free_bss_pool;
 	_queue	scanned_queue;
@@ -905,7 +902,7 @@ struct wlan_network *_rtw_find_same_network(_queue *scanned_queue, struct wlan_n
 struct wlan_network *rtw_find_same_network(_queue *scanned_queue, struct wlan_network *network);
 
 extern void rtw_free_assoc_resources(_adapter* adapter, int lock_scanned_queue);
-extern void rtw_indicate_disconnect(_adapter* adapter);
+extern void rtw_indicate_disconnect(_adapter *adapter, u16 reason, u8 locally_generated);
 extern void rtw_indicate_connect(_adapter* adapter);
 void rtw_indicate_scan_done( _adapter *padapter, bool aborted);
 
@@ -914,6 +911,7 @@ void rtw_scan_wait_completed(_adapter *adapter);
 u32 rtw_scan_abort_timeout(_adapter *adapter, u32 timeout_ms);
 void rtw_scan_abort_no_wait(_adapter *adapter);
 void rtw_scan_abort(_adapter *adapter);
+u32 rtw_join_abort_timeout(_adapter *adapter, u32 timeout_ms);
 
 extern int rtw_restruct_sec_ie(_adapter *adapter,u8 *in_ie,u8 *out_ie,uint in_len);
 extern int rtw_restruct_wmm_ie(_adapter *adapter, u8 *in_ie, u8 *out_ie, uint in_len, uint initial_out_len);

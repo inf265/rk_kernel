@@ -20,6 +20,13 @@
 #ifndef __IOCTL_CFG80211_H__
 #define __IOCTL_CFG80211_H__ 
 
+#ifndef RTW_CFG80211_ALWAYS_INFORM_STA_DISCONNECT_EVENT
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 2, 0))
+#define RTW_CFG80211_ALWAYS_INFORM_STA_DISCONNECT_EVENT 1
+#else
+#define RTW_CFG80211_ALWAYS_INFORM_STA_DISCONNECT_EVENT 0
+#endif
+#endif
 
 #if defined(RTW_USE_CFG80211_STA_EVENT)
 	#undef CONFIG_CFG80211_FORCE_COMPATIBLE_2_6_37_UNDER
@@ -83,8 +90,15 @@ struct rtw_wdev_priv
 	
 	_adapter *padapter;
 
+	#if !RTW_CFG80211_ALWAYS_INFORM_STA_DISCONNECT_EVENT
+	u8 not_indic_disco;
+	#endif
+
 	struct cfg80211_scan_request *scan_request;
 	_lock scan_req_lock;
+
+	struct cfg80211_connect_params *connect_req;
+	_lock connect_req_lock;
 
 	struct net_device *pmon_ndev;//for monitor interface
 	char ifname_mon[IFNAMSIZ + 1]; //interface name for monitor interface
@@ -110,6 +124,24 @@ struct rtw_wdev_priv
 #endif	
 	
 };
+
+bool rtw_cfg80211_is_connect_requested(_adapter *adapter);
+
+#if RTW_CFG80211_ALWAYS_INFORM_STA_DISCONNECT_EVENT
+#define rtw_wdev_not_indic_disco(rtw_wdev_data) 0
+#define rtw_wdev_set_not_indic_disco(rtw_wdev_data, val) do {} while (0)
+#else
+#define rtw_wdev_not_indic_disco(rtw_wdev_data) ((rtw_wdev_data)->not_indic_disco)
+#define rtw_wdev_set_not_indic_disco(rtw_wdev_data, val) do { (rtw_wdev_data)->not_indic_disco = (val); } while (0)
+#endif
+
+#define rtw_wdev_free_connect_req(rtw_wdev_data) \
+	do { \
+		if ((rtw_wdev_data)->connect_req) { \
+			rtw_mfree((u8 *)(rtw_wdev_data)->connect_req, sizeof(*(rtw_wdev_data)->connect_req)); \
+			(rtw_wdev_data)->connect_req = NULL; \
+		} \
+	} while (0)
 
 #define wiphy_to_adapter(x) (*((_adapter**)wiphy_priv(x)))
 
@@ -152,7 +184,7 @@ struct cfg80211_bss *rtw_cfg80211_inform_bss(_adapter *padapter, struct wlan_net
 int rtw_cfg80211_check_bss(_adapter *padapter);
 void rtw_cfg80211_ibss_indicate_connect(_adapter *padapter);
 void rtw_cfg80211_indicate_connect(_adapter *padapter);
-void rtw_cfg80211_indicate_disconnect(_adapter *padapter);
+void rtw_cfg80211_indicate_disconnect(_adapter *padapter, u16 reason, u8 locally_generated);
 void rtw_cfg80211_indicate_scan_done(_adapter *adapter, bool aborted);
 u32 rtw_cfg80211_wait_scan_req_empty(_adapter *adapter, u32 timeout_ms);
 
@@ -205,6 +237,27 @@ bool rtw_cfg80211_pwr_mgmt(_adapter *adapter);
 #define rtw_cfg80211_ready_on_channel(adapter, cookie, chan, channel_type, duration, gfp)  cfg80211_ready_on_channel((adapter)->rtw_wdev, cookie, chan, duration, gfp)
 #define rtw_cfg80211_remain_on_channel_expired(adapter, cookie, chan, chan_type, gfp) cfg80211_remain_on_channel_expired((adapter)->rtw_wdev, cookie, chan, gfp)
 #endif
+
+#define rtw_cfg80211_connect_result(wdev, bssid, req_ie, req_ie_len, resp_ie, resp_ie_len, status, gfp) cfg80211_connect_result(wdev_to_ndev(wdev), bssid, req_ie, req_ie_len, resp_ie, resp_ie_len, status, gfp)
+
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(4, 2, 0))
+#define rtw_cfg80211_disconnected(wdev, reason, ie, ie_len, locally_generated, gfp) cfg80211_disconnected(wdev_to_ndev(wdev), reason, ie, ie_len, gfp)
+#else
+#define rtw_cfg80211_disconnected(wdev, reason, ie, ie_len, locally_generated, gfp) cfg80211_disconnected(wdev_to_ndev(wdev), reason, ie, ie_len, locally_generated, gfp)
+#endif
+
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 26)) && (LINUX_VERSION_CODE < KERNEL_VERSION(4, 7, 0))
+#define NL80211_BAND_2GHZ IEEE80211_BAND_2GHZ
+#define NL80211_BAND_5GHZ IEEE80211_BAND_5GHZ
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 6, 0))
+#define NL80211_BAND_60GHZ IEEE80211_BAND_60GHZ
+#endif
+#define NUM_NL80211_BANDS IEEE80211_NUM_BANDS
+#endif
+
+#define rtw_band_to_nl80211_band(band) \
+	(band == BAND_ON_2_4G) ? NL80211_BAND_2GHZ : \
+	(band == BAND_ON_5G) ? NL80211_BAND_5GHZ : NUM_NL80211_BANDS
 
 #include "rtw_cfgvendor.h"
 

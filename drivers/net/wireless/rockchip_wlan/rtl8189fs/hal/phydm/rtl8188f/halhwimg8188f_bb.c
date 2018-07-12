@@ -1,6 +1,6 @@
 /****************************************************************************** 
 * 
-* Copyright(c) 2007 - 2011 Realtek Corporation. All rights reserved. 
+* Copyright(c) 2007 - 2017 Realtek Corporation. 
 * 
 * This program is free software; you can redistribute it and/or modify it 
 * under the terms of version 2 of the GNU General Public License as 
@@ -11,14 +11,9 @@
 * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for 
 * more details. 
 * 
-* You should have received a copy of the GNU General Public License along with 
-* this program; if not, write to the Free Software Foundation, Inc., 
-* 51 Franklin Street, Fifth Floor, Boston, MA 02110, USA 
-* 
-* 
 ******************************************************************************/
 
-/*Image2HeaderVersion: 2.18*/
+/*Image2HeaderVersion: 2.3.1*/
 #include "mp_precomp.h"
 #include "../phydm_precomp.h"
 
@@ -36,13 +31,19 @@ CheckPositive(
 				((pDM_Odm->BoardType & BIT3) >> 3) << 1 | /* _GPA*/ 
 				((pDM_Odm->BoardType & BIT7) >> 7) << 2 | /* _ALNA*/
 				((pDM_Odm->BoardType & BIT6) >> 6) << 3 | /* _APA */
-				((pDM_Odm->BoardType & BIT2) >> 2) << 4;  /* _BT*/  
+				((pDM_Odm->BoardType & BIT2) >> 2) << 4 | /* _BT*/  
+				((pDM_Odm->BoardType & BIT1) >> 1) << 5 | /* _NGFF*/  
+				((pDM_Odm->BoardType & BIT5) >> 5) << 6;  /* _TRSWT*/  
 
 	u4Byte	cond1   = Condition1, cond2 = Condition2, cond3 = Condition3, cond4 = Condition4;
-	u4Byte    driver1 = pDM_Odm->CutVersion       << 24 | 
+
+	u1Byte	cut_version_for_para   = (pDM_Odm->CutVersion == ODM_CUT_A) ? 15 : pDM_Odm->CutVersion;
+	u1Byte	pkg_type_for_para   = (pDM_Odm->PackageType == 0) ? 15 : pDM_Odm->PackageType;
+
+	u4Byte    driver1 = cut_version_for_para       << 24 | 
 				(pDM_Odm->SupportInterface & 0xF0) << 16 | 
 				pDM_Odm->SupportPlatform  << 16 | 
-				pDM_Odm->PackageType      << 12 | 
+				pkg_type_for_para      << 12 | 
 				(pDM_Odm->SupportInterface & 0x0F) << 8  |
 				_BoardType;
 
@@ -246,7 +247,7 @@ ODM_ReadAndConfig_MP_8188F_AGC_TAB(
 u4Byte
 ODM_GetVersion_MP_8188F_AGC_TAB(void)
 {
-	   return 25;
+	   return 38;
 }
 
 /******************************************************************************
@@ -254,7 +255,7 @@ ODM_GetVersion_MP_8188F_AGC_TAB(void)
 ******************************************************************************/
 
 u4Byte Array_MP_8188F_PHY_REG[] = { 
-		0x800, 0x83045700,
+		0x800, 0x80045700,
 		0x804, 0x00000001,
 		0x808, 0x0000FC00,
 		0x80C, 0x0000000A,
@@ -307,12 +308,12 @@ u4Byte Array_MP_8188F_PHY_REG[] = {
 		0x958, 0x4BC5D87A,
 		0x95C, 0x04EB9B79,
 		0x96C, 0x00000003,
-		0xA00, 0x00D047C8,
+		0xA00, 0x00D046C8,
 		0xA04, 0x80FF800C,
 	0x80000400,	0x00000000,	0x40000000,	0x00000000,
 		0xA08, 0x8C038300,
 	0xA0000000,	0x00000000,
-		0xA08, 0x8CCD8300,
+		0xA08, 0x8C898300,
 	0xB0000000,	0x00000000,
 		0xA0C, 0x2E7F120F,
 		0xA10, 0x9500BB78,
@@ -325,7 +326,11 @@ u4Byte Array_MP_8188F_PHY_REG[] = {
 		0xA2C, 0x00D30000,
 		0xA70, 0x101FBF00,
 		0xA74, 0x00000007,
+	0x80000400,	0x00000000,	0x40000000,	0x00000000,
 		0xA78, 0x00008900,
+	0xA0000000,	0x00000000,
+		0xA78, 0x00000900,
+	0xB0000000,	0x00000000,
 		0xA7C, 0x225B0606,
 		0xA80, 0x218075B1,
 		0xA84, 0x00120000,
@@ -373,7 +378,7 @@ u4Byte Array_MP_8188F_PHY_REG[] = {
 	0x80000400,	0x00000000,	0x40000000,	0x00000000,
 		0xC84, 0x21F60000,
 	0xA0000000,	0x00000000,
-		0xC84, 0x71F60000,
+		0xC84, 0x11F60000,
 	0xB0000000,	0x00000000,
 		0xC88, 0x40000100,
 		0xC8C, 0x20200000,
@@ -410,7 +415,7 @@ u4Byte Array_MP_8188F_PHY_REG[] = {
 		0xD18, 0x7A8F5B6F,
 		0xD2C, 0xCB979975,
 		0xD30, 0x00000000,
-		0xD34, 0x80608000,
+		0xD34, 0x40608000,
 		0xD38, 0x98000000,
 		0xD3C, 0x40127353,
 		0xD40, 0x00000000,
@@ -529,7 +534,7 @@ ODM_ReadAndConfig_MP_8188F_PHY_REG(
 u4Byte
 ODM_GetVersion_MP_8188F_PHY_REG(void)
 {
-	   return 25;
+	   return 38;
 }
 
 /******************************************************************************

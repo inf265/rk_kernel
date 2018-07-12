@@ -306,7 +306,7 @@ static int cpu_has_aliasing_icache(unsigned int arch)
 static void __init cacheid_init(void)
 {
 	unsigned int arch = cpu_architecture();
-
+printk("cacheid_init\n");
 	if (arch >= CPU_ARCH_ARMv6) {
 		unsigned int cachetype = read_cpuid_cachetype();
 		if ((cachetype & (7 << 29)) == 4 << 29) {
@@ -408,7 +408,7 @@ void notrace cpu_init(void)
 {
 	unsigned int cpu = smp_processor_id();
 	struct stack *stk = &stacks[cpu];
-
+	printk("cpu_init\n");
 	if (cpu >= NR_CPUS) {
 		printk(KERN_CRIT "CPU%u: bad primary CPU number\n", cpu);
 		BUG();
@@ -795,7 +795,7 @@ void __init hyp_mode_check(void)
 void __init setup_arch(char **cmdline_p)
 {
 	struct machine_desc *mdesc;
-
+	printk("setup_arch\n");
 	setup_processor();
 	mdesc = setup_machine_fdt(__atags_pointer);
 	if (!mdesc)

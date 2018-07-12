@@ -25,7 +25,7 @@
 			powerup_sequence = <s5k4ec_PWRSEQ>;
 			orientation = <0>;
 			i2c_add = <0x5a>;
-			i2c_rata = <100000>;
+			i2c_rata = <300000>;
 			i2c_chl = <2>;
 			cif_chl = <0>;
 			mclk_rate = <24>;

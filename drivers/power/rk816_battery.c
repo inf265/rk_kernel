@@ -46,6 +46,8 @@ module_param_named(dbg_level, dbg_enable, int, 0644);
 
 #define BAT_INFO(fmt, args...) pr_info("rk816-bat: "fmt, ##args)
 
+static struct wake_lock batt_wake_lock;//hw
+
 /* default param */
 #define DEFAULT_BAT_RES			135
 #define DEFAULT_SLP_ENTER_CUR		300
@@ -2954,7 +2956,11 @@ static void rk816_bat_power_supply_changed(struct rk816_battery *di)
 		else
 			di->prop_val = POWER_SUPPLY_STATUS_CHARGING;
 		rk816_bat_update_leds(di, di->prop_val);
+		//phm
+		wake_lock(&batt_wake_lock);  //unock//phm
 	}
+	else
+	wake_unlock(&batt_wake_lock);  //unock//phm
 
 	if (di->dsoc == old_soc)
 		return;
@@ -3413,11 +3419,14 @@ static void rk816_bat_irq_delay_work(struct work_struct *work)
 		di->plugin_trigger = 0;
 		rk816_bat_write(di, RK816_INT_STS_REG3, BIT(0));
 		rk_send_wakeup_key();
+		//phm add
+		//wake_lock(&batt_wake_lock);  //lock//phm
 		BAT_INFO("pmic: plug in\n");
 	} else if (di->plugout_trigger) {
 		di->plugout_trigger = 0;
 		rk816_bat_write(di, RK816_INT_STS_REG3, BIT(1));
 		rk_send_wakeup_key();
+		//wake_unlock(&batt_wake_lock);  //unock//phm
 		BAT_INFO("pmic: plug out\n");
 	} else if (di->cvtlmt_trigger) {
 		di->cvtlmt_trigger = 0;
@@ -4076,6 +4085,7 @@ static int rk816_battery_probe(struct platform_device *pdev)
 	INIT_DELAYED_WORK(&di->irq_delay_work, rk816_bat_irq_delay_work);
 	queue_delayed_work(di->bat_monitor_wq, &di->bat_delay_work,
 			   msecs_to_jiffies(TIMER_MS_COUNTS * 5));
+	wake_lock_init(&batt_wake_lock, WAKE_LOCK_SUSPEND, "batt_lock");	//phm
 
 	BAT_INFO("driver version %s\n", DRIVER_VERSION);
 	return ret;

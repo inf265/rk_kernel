@@ -1,6 +1,6 @@
 /****************************************************************************** 
 * 
-* Copyright(c) 2007 - 2011 Realtek Corporation. All rights reserved. 
+* Copyright(c) 2007 - 2017 Realtek Corporation. 
 * 
 * This program is free software; you can redistribute it and/or modify it 
 * under the terms of version 2 of the GNU General Public License as 
@@ -11,14 +11,9 @@
 * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for 
 * more details. 
 * 
-* You should have received a copy of the GNU General Public License along with 
-* this program; if not, write to the Free Software Foundation, Inc., 
-* 51 Franklin Street, Fifth Floor, Boston, MA 02110, USA 
-* 
-* 
 ******************************************************************************/
 
-/*Image2HeaderVersion: 2.18*/
+/*Image2HeaderVersion: 2.3.1*/
 #include "mp_precomp.h"
 #include "../phydm_precomp.h"
 
@@ -36,13 +31,19 @@ CheckPositive(
 				((pDM_Odm->BoardType & BIT3) >> 3) << 1 | /* _GPA*/ 
 				((pDM_Odm->BoardType & BIT7) >> 7) << 2 | /* _ALNA*/
 				((pDM_Odm->BoardType & BIT6) >> 6) << 3 | /* _APA */
-				((pDM_Odm->BoardType & BIT2) >> 2) << 4;  /* _BT*/  
+				((pDM_Odm->BoardType & BIT2) >> 2) << 4 | /* _BT*/  
+				((pDM_Odm->BoardType & BIT1) >> 1) << 5 | /* _NGFF*/  
+				((pDM_Odm->BoardType & BIT5) >> 5) << 6;  /* _TRSWT*/  
 
 	u4Byte	cond1   = Condition1, cond2 = Condition2, cond3 = Condition3, cond4 = Condition4;
-	u4Byte    driver1 = pDM_Odm->CutVersion       << 24 | 
+
+	u1Byte	cut_version_for_para   = (pDM_Odm->CutVersion == ODM_CUT_A) ? 15 : pDM_Odm->CutVersion;
+	u1Byte	pkg_type_for_para   = (pDM_Odm->PackageType == 0) ? 15 : pDM_Odm->PackageType;
+
+	u4Byte    driver1 = cut_version_for_para       << 24 | 
 				(pDM_Odm->SupportInterface & 0xF0) << 16 | 
 				pDM_Odm->SupportPlatform  << 16 | 
-				pDM_Odm->PackageType      << 12 | 
+				pkg_type_for_para      << 12 | 
 				(pDM_Odm->SupportInterface & 0x0F) << 8  |
 				_BoardType;
 
@@ -131,14 +132,18 @@ u4Byte Array_MP_8188F_MAC_REG[] = {
 		0x431, 0x00000000,
 		0x432, 0x00000000,
 		0x433, 0x00000001,
-		0x434, 0x00000004,
-		0x435, 0x00000005,
-		0x436, 0x00000007,
-		0x437, 0x00000008,
-		0x43C, 0x00000004,
-		0x43D, 0x00000005,
-		0x43E, 0x00000007,
-		0x43F, 0x00000008,
+		0x434, 0x00000002,
+		0x435, 0x00000003,
+		0x436, 0x00000005,
+		0x437, 0x00000007,
+		0x438, 0x00000000,
+		0x439, 0x00000000,
+		0x43A, 0x00000000,
+		0x43B, 0x00000001,
+		0x43C, 0x00000002,
+		0x43D, 0x00000003,
+		0x43E, 0x00000005,
+		0x43F, 0x00000007,
 		0x440, 0x0000005D,
 		0x441, 0x00000001,
 		0x442, 0x00000000,
@@ -281,7 +286,7 @@ ODM_ReadAndConfig_MP_8188F_MAC_REG(
 u4Byte
 ODM_GetVersion_MP_8188F_MAC_REG(void)
 {
-	   return 25;
+	   return 38;
 }
 
 #endif /* end of HWIMG_SUPPORT*/

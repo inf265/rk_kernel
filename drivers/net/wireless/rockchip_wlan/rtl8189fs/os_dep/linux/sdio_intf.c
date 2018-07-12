@@ -600,8 +600,8 @@ static void rtw_sdio_if1_deinit(_adapter *if1)
 {
 	struct mlme_priv *pmlmepriv= &if1->mlmepriv;
 
-	if(check_fwstate(pmlmepriv, _FW_LINKED))
-		rtw_disassoc_cmd(if1, 0, _FALSE);
+	if (check_fwstate(pmlmepriv, _FW_LINKED))
+		rtw_disassoc_cmd(if1, 0, RTW_CMDF_DIRECTLY);
 
 #ifdef CONFIG_AP_MODE
 	free_mlme_ap_info(if1);
@@ -733,6 +733,7 @@ static int rtw_drv_init(
 
 	if (sdio_alloc_irq(dvobj) != _SUCCESS)
 		goto os_ndevs_deinit;
+
 #ifdef	CONFIG_GPIO_WAKEUP
 #ifdef CONFIG_PLATFORM_ARM_SUN6I
         eint_wlan_handle = sw_gpio_irq_request(gpio_eint_wlan, TRIG_EDGE_NEGATIVE,(peint_handle)gpio_hostwakeup_irq_thread, NULL);
@@ -1089,12 +1090,17 @@ void rockchip_wifi_exit_module_rtkwifi(void)
     rockchip_wifi_power(0);
 }
 
+#ifdef CONFIG_WIFI_BUILD_MODULE
+module_init(rockchip_wifi_init_module_rtkwifi);
+module_exit(rockchip_wifi_exit_module_rtkwifi);
+#else
 #ifdef CONFIG_WIFI_LOAD_DRIVER_WHEN_KERNEL_BOOTUP
 late_initcall(rockchip_wifi_init_module_rtkwifi);
 module_exit(rockchip_wifi_exit_module_rtkwifi);
 #else
 EXPORT_SYMBOL(rockchip_wifi_init_module_rtkwifi);
 EXPORT_SYMBOL(rockchip_wifi_exit_module_rtkwifi);
+#endif
 #endif
 
 //module_init(rtw_drv_entry);

@@ -103,6 +103,8 @@ static void timer_trig_deactivate(struct led_classdev *led_cdev)
 		led_cdev->activated = false;
 	}
 	
+	printk("phm------------timer_trig_deactivate--\n");
+	
 	/* Stop blinking */
 	led_set_brightness(led_cdev, LED_OFF);
 	

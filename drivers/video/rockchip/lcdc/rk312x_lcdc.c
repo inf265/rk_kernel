@@ -786,7 +786,8 @@ static int rk312x_lcdc_pre_init(struct rk_lcdc_driver *dev_drv)
 		dev_err(lcdc_dev->dev, "failed to get lcdc%d clk source\n",
 			lcdc_dev->id);
 	}
-
+	
+	if (!support_uboot_display())
 	rk_disp_pwr_enable(dev_drv);
 	rk312x_lcdc_clk_enable(lcdc_dev);
 
@@ -1210,7 +1211,7 @@ static int rk312x_load_screen(struct rk_lcdc_driver *dev_drv, bool initscreen)
 		case SCREEN_RGB:
 			if (lcdc_dev->soc_type == VOP_RK312X) {
 				mask = m_RGB_DCLK_EN | m_RGB_DCLK_INVERT;
-				val = v_RGB_DCLK_EN(1) | v_RGB_DCLK_INVERT(0);
+				val = v_RGB_DCLK_EN(1) | v_RGB_DCLK_INVERT(1);
 				lcdc_msk_reg(lcdc_dev, AXI_BUS_CTRL, mask, val);
 			}
 			break;

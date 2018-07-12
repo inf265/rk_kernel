@@ -1,6 +1,6 @@
 /****************************************************************************** 
 * 
-* Copyright(c) 2007 - 2011 Realtek Corporation. All rights reserved. 
+* Copyright(c) 2007 - 2017 Realtek Corporation. 
 * 
 * This program is free software; you can redistribute it and/or modify it 
 * under the terms of version 2 of the GNU General Public License as 
@@ -11,14 +11,9 @@
 * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for 
 * more details. 
 * 
-* You should have received a copy of the GNU General Public License along with 
-* this program; if not, write to the Free Software Foundation, Inc., 
-* 51 Franklin Street, Fifth Floor, Boston, MA 02110, USA 
-* 
-* 
 ******************************************************************************/
 
-/*Image2HeaderVersion: 2.18*/
+/*Image2HeaderVersion: 2.3.1*/
 #include "mp_precomp.h"
 #include "../phydm_precomp.h"
 
@@ -36,13 +31,19 @@ CheckPositive(
 				((pDM_Odm->BoardType & BIT3) >> 3) << 1 | /* _GPA*/ 
 				((pDM_Odm->BoardType & BIT7) >> 7) << 2 | /* _ALNA*/
 				((pDM_Odm->BoardType & BIT6) >> 6) << 3 | /* _APA */
-				((pDM_Odm->BoardType & BIT2) >> 2) << 4;  /* _BT*/  
+				((pDM_Odm->BoardType & BIT2) >> 2) << 4 | /* _BT*/  
+				((pDM_Odm->BoardType & BIT1) >> 1) << 5 | /* _NGFF*/  
+				((pDM_Odm->BoardType & BIT5) >> 5) << 6;  /* _TRSWT*/  
 
 	u4Byte	cond1   = Condition1, cond2 = Condition2, cond3 = Condition3, cond4 = Condition4;
-	u4Byte    driver1 = pDM_Odm->CutVersion       << 24 | 
+
+	u1Byte	cut_version_for_para   = (pDM_Odm->CutVersion == ODM_CUT_A) ? 15 : pDM_Odm->CutVersion;
+	u1Byte	pkg_type_for_para   = (pDM_Odm->PackageType == 0) ? 15 : pDM_Odm->PackageType;
+
+	u4Byte    driver1 = cut_version_for_para       << 24 | 
 				(pDM_Odm->SupportInterface & 0xF0) << 16 | 
 				pDM_Odm->SupportPlatform  << 16 | 
-				pDM_Odm->PackageType      << 12 | 
+				pkg_type_for_para      << 12 | 
 				(pDM_Odm->SupportInterface & 0x0F) << 8  |
 				_BoardType;
 
@@ -124,6 +125,11 @@ u4Byte Array_MP_8188F_RadioA[] = {
 		0x008, 0x00008400,
 		0x018, 0x00000407,
 		0x019, 0x00000012,
+	0x80000400,	0x00000000,	0x40000000,	0x00000000,
+		0x01B, 0x00000C6C,
+	0xA0000000,	0x00000000,
+		0x01B, 0x00001C6C,
+	0xB0000000,	0x00000000,
 		0x01E, 0x00080009,
 		0x01F, 0x00000880,
 		0x02F, 0x0001A060,
@@ -136,11 +142,23 @@ u4Byte Array_MP_8188F_RadioA[] = {
 		0x0B0, 0x000FF9F0,
 		0x0B1, 0x00022218,
 		0x0B2, 0x00034C00,
+	0x8c000400,	0x00000000,	0x40000000,	0x00000000,
+		0x0B4, 0x0004486B,
+	0x9c000000,	0x00000000,	0x40000000,	0x00000000,
+		0x0B4, 0x0004486B,
+	0xA0000000,	0x00000000,
 		0x0B4, 0x0004484B,
+	0xB0000000,	0x00000000,
 		0x0B5, 0x0000112A,
 		0x0B6, 0x0000053E,
 		0x0B7, 0x00010408,
+	0x8c000400,	0x00000000,	0x40000000,	0x00000000,
+		0x0B8, 0x000100AF,
+	0x9c000000,	0x00000000,	0x40000000,	0x00000000,
+		0x0B8, 0x000100AF,
+	0xA0000000,	0x00000000,
 		0x0B8, 0x00010200,
+	0xB0000000,	0x00000000,
 		0x0B9, 0x00080001,
 		0x0BA, 0x00040001,
 		0x0BB, 0x00000400,
@@ -156,32 +174,63 @@ u4Byte Array_MP_8188F_RadioA[] = {
 		0x0CA, 0x00080000,
 		0x0DF, 0x00000180,
 		0x0EF, 0x000001A0,
-	0x81000000,	0x00000000,	0x40000000,	0x00000000,
-		0x051, 0x000E8231,
-		0x052, 0x000FAC88,
-		0x053, 0x00000141,
-	0xA0000000,	0x00000000,
+	0x8f000000,	0x00000000,	0x40000000,	0x00000000,
 		0x051, 0x000E8333,
-		0x052, 0x000FAC88,
-		0x053, 0x00000103,
-	0xB0000000,	0x00000000,
-		0x056, 0x000517F0,
-	0x81000000,	0x00000000,	0x40000000,	0x00000000,
-		0x035, 0x00000090,
-		0x035, 0x00000190,
-		0x035, 0x00000290,
-		0x036, 0x00001064,
-		0x036, 0x00009064,
-		0x036, 0x00011064,
-		0x036, 0x00019064,
 	0xA0000000,	0x00000000,
+		0x051, 0x000E8231,
+	0xB0000000,	0x00000000,
+	0x80000400,	0x00000000,	0x40000000,	0x00000000,
+		0x052, 0x000FAC88,
+	0x9f000000,	0x00000000,	0x40000000,	0x00000000,
+		0x052, 0x000FAC2C,
+	0xA0000000,	0x00000000,
+		0x052, 0x000FAC2F,
+	0xB0000000,	0x00000000,
+	0x8f000000,	0x00000000,	0x40000000,	0x00000000,
+		0x053, 0x00000103,
+	0xA0000000,	0x00000000,
+		0x053, 0x000001C1,
+	0xB0000000,	0x00000000,
+		0x054, 0x00055007,
+		0x056, 0x000517F0,
+	0x8f000000,	0x00000000,	0x40000000,	0x00000000,
 		0x035, 0x00000099,
 		0x035, 0x00000199,
 		0x035, 0x00000299,
+	0xA0000000,	0x00000000,
+		0x035, 0x00000090,
+		0x035, 0x00000190,
+		0x035, 0x00000290,
+	0xB0000000,	0x00000000,
+	0x8b000000,	0x00000000,	0x40000000,	0x00000000,
+		0x05F, 0x00023500,
+	0x9c000400,	0x00000000,	0x40000000,	0x00000000,
+		0x05F, 0x00023504,
+	0x9c000000,	0x00000000,	0x40000000,	0x00000000,
+		0x05F, 0x00023504,
+	0xA0000000,	0x00000000,
+		0x05F, 0x000FFFFF,
+	0xB0000000,	0x00000000,
+	0x8f000000,	0x00000000,	0x40000000,	0x00000000,
 		0x036, 0x00000064,
 		0x036, 0x00008064,
 		0x036, 0x00010064,
 		0x036, 0x00018064,
+	0x9c000400,	0x00000000,	0x40000000,	0x00000000,
+		0x036, 0x00001068,
+		0x036, 0x00009068,
+		0x036, 0x00011068,
+		0x036, 0x00019068,
+	0x9c000000,	0x00000000,	0x40000000,	0x00000000,
+		0x036, 0x00001068,
+		0x036, 0x00009068,
+		0x036, 0x00011068,
+		0x036, 0x00019068,
+	0xA0000000,	0x00000000,
+		0x036, 0x00001064,
+		0x036, 0x00009064,
+		0x036, 0x00011064,
+		0x036, 0x00019064,
 	0xB0000000,	0x00000000,
 		0x018, 0x00000C07,
 		0x05A, 0x00048000,
@@ -198,25 +247,25 @@ u4Byte Array_MP_8188F_RadioA[] = {
 		0x034, 0x00002CC8,
 		0x034, 0x00001C4B,
 		0x034, 0x00000C48,
-	0x91000000,	0x00000000,	0x40000000,	0x00000000,
-		0x034, 0x0000ADD3,
-		0x034, 0x00009DD1,
-		0x034, 0x00008CF4,
-		0x034, 0x00007CF1,
-		0x034, 0x00006CEE,
-		0x034, 0x00005CD3,
-		0x034, 0x00004CD0,
-		0x034, 0x00003CCD,
-		0x034, 0x00002CCA,
-		0x034, 0x00001C4D,
-		0x034, 0x00000C4A,
-	0xA0000000,	0x00000000,
+	0x9f000000,	0x00000000,	0x40000000,	0x00000000,
 		0x034, 0x0000ADD6,
 		0x034, 0x00009DD3,
 		0x034, 0x00008CF4,
 		0x034, 0x00007CF1,
 		0x034, 0x00006CEE,
 		0x034, 0x00005CEB,
+		0x034, 0x00004CCE,
+		0x034, 0x00003CCB,
+		0x034, 0x00002CC8,
+		0x034, 0x00001C4B,
+		0x034, 0x00000C48,
+	0xA0000000,	0x00000000,
+		0x034, 0x0000ADD2,
+		0x034, 0x00009DD0,
+		0x034, 0x00008CF2,
+		0x034, 0x00007CEF,
+		0x034, 0x00006CEC,
+		0x034, 0x00005CD1,
 		0x034, 0x00004CCE,
 		0x034, 0x00003CCB,
 		0x034, 0x00002CC8,
@@ -326,7 +375,7 @@ ODM_ReadAndConfig_MP_8188F_RadioA(
 u4Byte
 ODM_GetVersion_MP_8188F_RadioA(void)
 {
-	   return 25;
+	   return 38;
 }
 
 /******************************************************************************
@@ -556,10 +605,10 @@ const char *Array_MP_8188F_TXPWR_LMT[] = {
 	"FCC", "2.4G", "20M", "CCK", "1T", "11", "32", 
 	"ETSI", "2.4G", "20M", "CCK", "1T", "11", "26", 
 	"MKK", "2.4G", "20M", "CCK", "1T", "11", "32",
-	"FCC", "2.4G", "20M", "CCK", "1T", "12", "63", 
+	"FCC", "2.4G", "20M", "CCK", "1T", "12", "30", 
 	"ETSI", "2.4G", "20M", "CCK", "1T", "12", "26", 
 	"MKK", "2.4G", "20M", "CCK", "1T", "12", "32",
-	"FCC", "2.4G", "20M", "CCK", "1T", "13", "63", 
+	"FCC", "2.4G", "20M", "CCK", "1T", "13", "26", 
 	"ETSI", "2.4G", "20M", "CCK", "1T", "13", "26", 
 	"MKK", "2.4G", "20M", "CCK", "1T", "13", "32",
 	"FCC", "2.4G", "20M", "CCK", "1T", "14", "63", 
@@ -598,10 +647,10 @@ const char *Array_MP_8188F_TXPWR_LMT[] = {
 	"FCC", "2.4G", "20M", "OFDM", "1T", "11", "28", 
 	"ETSI", "2.4G", "20M", "OFDM", "1T", "11", "30", 
 	"MKK", "2.4G", "20M", "OFDM", "1T", "11", "30",
-	"FCC", "2.4G", "20M", "OFDM", "1T", "12", "63", 
+	"FCC", "2.4G", "20M", "OFDM", "1T", "12", "24", 
 	"ETSI", "2.4G", "20M", "OFDM", "1T", "12", "30", 
 	"MKK", "2.4G", "20M", "OFDM", "1T", "12", "30",
-	"FCC", "2.4G", "20M", "OFDM", "1T", "13", "63", 
+	"FCC", "2.4G", "20M", "OFDM", "1T", "13", "16", 
 	"ETSI", "2.4G", "20M", "OFDM", "1T", "13", "30", 
 	"MKK", "2.4G", "20M", "OFDM", "1T", "13", "30",
 	"FCC", "2.4G", "20M", "OFDM", "1T", "14", "63", 
@@ -640,10 +689,10 @@ const char *Array_MP_8188F_TXPWR_LMT[] = {
 	"FCC", "2.4G", "20M", "HT", "1T", "11", "28", 
 	"ETSI", "2.4G", "20M", "HT", "1T", "11", "30", 
 	"MKK", "2.4G", "20M", "HT", "1T", "11", "30",
-	"FCC", "2.4G", "20M", "HT", "1T", "12", "63", 
+	"FCC", "2.4G", "20M", "HT", "1T", "12", "24", 
 	"ETSI", "2.4G", "20M", "HT", "1T", "12", "30", 
 	"MKK", "2.4G", "20M", "HT", "1T", "12", "30",
-	"FCC", "2.4G", "20M", "HT", "1T", "13", "63", 
+	"FCC", "2.4G", "20M", "HT", "1T", "13", "16", 
 	"ETSI", "2.4G", "20M", "HT", "1T", "13", "30", 
 	"MKK", "2.4G", "20M", "HT", "1T", "13", "30",
 	"FCC", "2.4G", "20M", "HT", "1T", "14", "63", 
@@ -718,10 +767,10 @@ const char *Array_MP_8188F_TXPWR_LMT[] = {
 	"FCC", "2.4G", "40M", "HT", "1T", "09", "26", 
 	"ETSI", "2.4G", "40M", "HT", "1T", "09", "26", 
 	"MKK", "2.4G", "40M", "HT", "1T", "09", "26",
-	"FCC", "2.4G", "40M", "HT", "1T", "10", "26", 
+	"FCC", "2.4G", "40M", "HT", "1T", "10", "24", 
 	"ETSI", "2.4G", "40M", "HT", "1T", "10", "26", 
 	"MKK", "2.4G", "40M", "HT", "1T", "10", "26",
-	"FCC", "2.4G", "40M", "HT", "1T", "11", "26", 
+	"FCC", "2.4G", "40M", "HT", "1T", "11", "10", 
 	"ETSI", "2.4G", "40M", "HT", "1T", "11", "26", 
 	"MKK", "2.4G", "40M", "HT", "1T", "11", "26",
 	"FCC", "2.4G", "40M", "HT", "1T", "12", "63", 
@@ -1095,8 +1144,13 @@ ODM_ReadAndConfig_MP_8188F_TXPWR_LMT(
 )
 {
 	u4Byte     i           = 0;
+#if (DM_ODM_SUPPORT_TYPE == ODM_IOT)
+	u4Byte     ArrayLen    = sizeof(Array_MP_8188F_TXPWR_LMT)/sizeof(u1Byte);
+	pu1Byte    Array      = (pu1Byte)Array_MP_8188F_TXPWR_LMT;
+#else
 	u4Byte     ArrayLen    = sizeof(Array_MP_8188F_TXPWR_LMT)/sizeof(pu1Byte);
 	pu1Byte    *Array      = (pu1Byte *)Array_MP_8188F_TXPWR_LMT;
+#endif
 
 #if (DM_ODM_SUPPORT_TYPE == ODM_WIN)
 	PADAPTER		Adapter = pDM_Odm->Adapter;
@@ -1109,6 +1163,15 @@ ODM_ReadAndConfig_MP_8188F_TXPWR_LMT(
 	ODM_RT_TRACE(pDM_Odm, ODM_COMP_INIT, ODM_DBG_LOUD, ("===> ODM_ReadAndConfig_MP_8188F_TXPWR_LMT\n"));
 
 	for (i = 0; i < ArrayLen; i += 7) {
+#if (DM_ODM_SUPPORT_TYPE == ODM_IOT)
+		u1Byte regulation = Array[i];
+		u1Byte band = Array[i+1];
+		u1Byte bandwidth = Array[i+2];
+		u1Byte rate = Array[i+3];
+		u1Byte rfPath = Array[i+4];
+		u1Byte chnl = Array[i+5];
+		u1Byte val = Array[i+6];
+#else
 		pu1Byte regulation = Array[i];
 		pu1Byte band = Array[i+1];
 		pu1Byte bandwidth = Array[i+2];
@@ -1116,6 +1179,7 @@ ODM_ReadAndConfig_MP_8188F_TXPWR_LMT(
 		pu1Byte rfPath = Array[i+4];
 		pu1Byte chnl = Array[i+5];
 		pu1Byte val = Array[i+6];
+#endif
 	
 		odm_ConfigBB_TXPWR_LMT_8188F(pDM_Odm, regulation, band, bandwidth, rate, rfPath, chnl, val);
 #if (DM_ODM_SUPPORT_TYPE == ODM_WIN)

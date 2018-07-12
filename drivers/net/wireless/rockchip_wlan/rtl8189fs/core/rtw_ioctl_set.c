@@ -358,10 +358,10 @@ _func_enter_;
 			RT_TRACE(_module_rtl871x_ioctl_set_c_,_drv_info_,("set_bssid="MAC_FMT"\n", MAC_ARG(bssid) ));
 			RT_TRACE(_module_rtl871x_ioctl_set_c_,_drv_info_,("cur_bssid="MAC_FMT"\n", MAC_ARG(pmlmepriv->cur_network.network.MacAddress) ));
 
-			rtw_disassoc_cmd(padapter, 0, _TRUE);
+			rtw_disassoc_cmd(padapter, 0, 0);
 
 			if (check_fwstate(pmlmepriv, _FW_LINKED) == _TRUE)
-				rtw_indicate_disconnect(padapter);
+				rtw_indicate_disconnect(padapter, 0, _FALSE);
 
 			rtw_free_assoc_resources(padapter, 1);
 
@@ -448,10 +448,10 @@ _func_enter_;
 				if(rtw_is_same_ibss(padapter, pnetwork) == _FALSE)
 				{				
 					//if in WIFI_ADHOC_MASTER_STATE | WIFI_ADHOC_STATE, create bss or rejoin again
-					rtw_disassoc_cmd(padapter, 0, _TRUE);
+					rtw_disassoc_cmd(padapter, 0, 0);
 
 					if (check_fwstate(pmlmepriv, _FW_LINKED) == _TRUE)
-						rtw_indicate_disconnect(padapter);
+						rtw_indicate_disconnect(padapter, 0, _FALSE);
 						
 					rtw_free_assoc_resources(padapter, 1);
 
@@ -477,10 +477,10 @@ _func_enter_;
 			RT_TRACE(_module_rtl871x_ioctl_set_c_,_drv_info_,("set_ssid=[%s] len=0x%x\n", ssid->Ssid, (unsigned int)ssid->SsidLength));
 			RT_TRACE(_module_rtl871x_ioctl_set_c_,_drv_info_,("assoc_ssid=[%s] len=0x%x\n", pmlmepriv->assoc_ssid.Ssid, (unsigned int)pmlmepriv->assoc_ssid.SsidLength));
 
-			rtw_disassoc_cmd(padapter, 0, _TRUE);
+			rtw_disassoc_cmd(padapter, 0, 0);
 
 			if (check_fwstate(pmlmepriv, _FW_LINKED) == _TRUE)
-				rtw_indicate_disconnect(padapter);
+				rtw_indicate_disconnect(padapter, 0, _FALSE);
 			
 			rtw_free_assoc_resources(padapter, 1);
 
@@ -634,7 +634,7 @@ _func_enter_;
 		_enter_critical_bh(&pmlmepriv->lock, &irqL);
 		
 		if((check_fwstate(pmlmepriv, _FW_LINKED)== _TRUE) ||(*pold_state==Ndis802_11IBSS))
-			rtw_disassoc_cmd(padapter, 0, _TRUE);
+			rtw_disassoc_cmd(padapter, 0, 0);
 
 		if((check_fwstate(pmlmepriv, _FW_LINKED)== _TRUE) ||
 			(check_fwstate(pmlmepriv, WIFI_ADHOC_MASTER_STATE)== _TRUE) )
@@ -644,7 +644,7 @@ _func_enter_;
 	       {
 			if(check_fwstate(pmlmepriv, _FW_LINKED) == _TRUE)
 			{		
-				rtw_indicate_disconnect(padapter); //will clr Linked_state; before this function, we must have chked whether  issue dis-assoc_cmd or not
+				rtw_indicate_disconnect(padapter, 0, _FALSE); /*will clr Linked_state; before this function, we must have checked whether issue dis-assoc_cmd or not*/
 			}
 	       }
 		
@@ -706,8 +706,8 @@ _func_enter_;
 	{
 		RT_TRACE(_module_rtl871x_ioctl_set_c_,_drv_info_,("MgntActrtw_set_802_11_disassociate: rtw_indicate_disconnect\n"));
 
-		rtw_disassoc_cmd(padapter, 0, _TRUE);
-		rtw_indicate_disconnect(padapter);
+		rtw_disassoc_cmd(padapter, 0, 0);
+		rtw_indicate_disconnect(padapter, 0, _FALSE);
 		//modify for CONFIG_IEEE80211W, none 11w can use it
 		rtw_free_assoc_resources_cmd(padapter);
 		if (_FAIL == rtw_pwr_wakeup(padapter))
@@ -1372,7 +1372,7 @@ u16 rtw_get_cur_max_rate(_adapter *adapter)
 	if (psta == NULL)
 		return 0;
 
-	short_GI = query_ra_short_GI(psta);
+	short_GI = query_ra_short_GI(psta, psta->bw_mode);
 
 #ifdef CONFIG_80211N_HT
 	if (IsSupportedHT(psta->wireless_mode)) {

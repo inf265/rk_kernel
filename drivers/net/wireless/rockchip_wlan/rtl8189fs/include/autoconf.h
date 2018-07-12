@@ -53,7 +53,6 @@
 	#endif //!CONFIG_PLATFORM_INTEL_BYT
 	//#define CONFIG_DEBUG_CFG80211
 	#define CONFIG_SET_SCAN_DENY_TIMER
-	/*#define SUPPLICANT_RTK_VERSION_LOWER_THAN_JB42*/ /* wpa_supplicant realtek version <= jb42 will be defined this */
 #endif
 
 #define CONFIG_AP_MODE
@@ -78,7 +77,7 @@
 	#define CONFIG_P2P_PS
 	#define CONFIG_P2P_OP_CHK_SOCIAL_CH
 	#define CONFIG_CFG80211_ONECHANNEL_UNDER_CONCURRENT  //replace CONFIG_P2P_CHK_INVITE_CH_LIST flag
-	#define CONFIG_P2P_INVITE_IOT
+	/* #define CONFIG_P2P_INVITE_IOT */
 #endif
 
 // Added by Kurt 20110511
@@ -140,6 +139,7 @@
 #define CONFIG_XMIT_THREAD_MODE
 //#define CONFIG_SDIO_TX_ENABLE_AVAL_INT
 
+/* #define CONFIG_RECV_THREAD_MODE */
 
 /*
  * Others
@@ -211,7 +211,7 @@
 
 #ifdef CONFIG_WOWLAN
 	//#define CONFIG_GTK_OL
-	#define CONFIG_ARP_KEEP_ALIVE
+	/* #define CONFIG_ARP_KEEP_ALIVE */
 #endif // CONFIG_WOWLAN
 
 #ifdef CONFIG_GPIO_WAKEUP

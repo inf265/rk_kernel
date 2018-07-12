@@ -3515,7 +3515,7 @@ _func_enter_;
 
 					rtw_p2p_set_state(pwdinfo, P2P_STATE_LISTEN);
 					if(!check_buddy_mlmeinfo_state(padapter, WIFI_FW_AP_STATE) &&
-					!(pmlmeinfo->state&0x03) == WIFI_FW_AP_STATE)
+					((pmlmeinfo->state&0x03) != WIFI_FW_AP_STATE))
 					{
 						val8 = 1;
 						rtw_hal_set_hwreg(padapter, HW_VAR_MLME_SITESURVEY, (u8 *)(&val8));
@@ -3539,7 +3539,7 @@ _func_enter_;
 				if ( pbuddy_mlmeext->cur_channel != pwdinfo->listen_channel )
 				{
 					set_channel_bwmode(padapter, pbuddy_mlmeext->cur_channel, pbuddy_mlmeext->cur_ch_offset, pbuddy_mlmeext->cur_bwmode);
-					if(!check_buddy_mlmeinfo_state(padapter, WIFI_FW_AP_STATE) &&!(pmlmeinfo->state&0x03) == WIFI_FW_AP_STATE)
+					if (!check_buddy_mlmeinfo_state(padapter, WIFI_FW_AP_STATE) && ((pmlmeinfo->state&0x03) != WIFI_FW_AP_STATE))
 					{						
 						val8 = 0;
 						rtw_hal_set_hwreg(padapter, HW_VAR_MLME_SITESURVEY, (u8 *)(&val8));
@@ -4317,10 +4317,13 @@ int rtw_p2p_check_frames(_adapter *padapter, const u8 *buf, u32 len, u8 tx)
 					if (!tx) {
 						#if defined(CONFIG_CONCURRENT_MODE) && defined(CONFIG_CFG80211_ONECHANNEL_UNDER_CONCURRENT)
 						if (check_buddy_fwstate(padapter , _FW_LINKED) && padapter->registrypriv.full_ch_in_p2p_handshake == 0) {
+							#ifdef CONFIG_P2P_INVITE_IOT
 							if (op_ch != -1 && rtw_chk_p2pie_op_ch_with_buddy(padapter, frame_body, len-sizeof(struct rtw_ieee80211_hdr_3addr)) == _FALSE) {
 								DBG_871X(FUNC_ADPT_FMT" op_ch:%u has no intersect with buddy\n", FUNC_ADPT_ARG(padapter), op_ch);
 								rtw_change_p2pie_ch_list(padapter, frame_body, len-sizeof(struct rtw_ieee80211_hdr_3addr), 0);
-							} else if (rtw_chk_p2pie_ch_list_with_buddy(padapter, frame_body, len-sizeof(struct rtw_ieee80211_hdr_3addr)) == _FALSE) {
+							} else
+							#endif
+							if (rtw_chk_p2pie_ch_list_with_buddy(padapter, frame_body, len-sizeof(struct rtw_ieee80211_hdr_3addr)) == _FALSE) {
 								DBG_871X(FUNC_ADPT_FMT" ch_list has no intersect with buddy\n", FUNC_ADPT_ARG(padapter));
 								rtw_change_p2pie_ch_list(padapter, frame_body, len-sizeof(struct rtw_ieee80211_hdr_3addr), 0);
 							}

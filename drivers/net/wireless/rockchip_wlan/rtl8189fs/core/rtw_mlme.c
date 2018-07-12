@@ -1406,14 +1406,14 @@ _func_enter_;
 						}
 #endif // CONFIG_INTEL_WIDI
 						rtw_free_assoc_resources(adapter, 1);
-						rtw_indicate_disconnect(adapter);
+						rtw_indicate_disconnect(adapter, 0, _FALSE);
 					} else {
 						pmlmepriv->to_join = _TRUE;
 					}
 				}
 				else
 				{
-					rtw_indicate_disconnect(adapter);
+					rtw_indicate_disconnect(adapter, 0, _FALSE);
 				}
 				_clr_fwstate_(pmlmepriv, _FW_UNDER_LINKING);
 			}
@@ -1425,7 +1425,7 @@ _func_enter_;
 			{
 				if (rtw_select_roaming_candidate(pmlmepriv) == _SUCCESS) {
 					receive_disconnect(adapter, pmlmepriv->cur_network.network.MacAddress
-						, WLAN_REASON_ACTIVE_ROAM);
+						, WLAN_REASON_ACTIVE_ROAM, _FALSE);
 				}
 			}
 		}
@@ -1700,7 +1700,7 @@ _func_exit_;
 /*
 *rtw_indicate_disconnect: the caller has to lock pmlmepriv->lock
 */
-void rtw_indicate_disconnect( _adapter *padapter )
+void rtw_indicate_disconnect(_adapter *padapter, u16 reason, u8 locally_generated)
 {
 	struct	mlme_priv *pmlmepriv = &padapter->mlmepriv;	
 	struct mlme_ext_priv *pmlmeext = &(padapter->mlmeextpriv);
@@ -1755,7 +1755,8 @@ _func_enter_;
 		|| (rtw_to_roam(padapter) <= 0)
 	)
 	{
-		rtw_os_indicate_disconnect(padapter);
+
+		rtw_os_indicate_disconnect(padapter, reason, locally_generated);
 
 		//set ips_deny_time to avoid enter IPS before LPS leave
 		rtw_set_ips_deny(padapter, 3000);
@@ -1879,6 +1880,55 @@ void rtw_scan_abort_no_wait(_adapter *adapter)
 void rtw_scan_abort(_adapter *adapter)
 {
 	rtw_scan_abort_timeout(adapter, 200);
+}
+
+static u32 _rtw_wait_join_done(_adapter *adapter, u8 abort, u32 timeout_ms)
+{
+	u32 start;
+	u32 pass_ms;
+	struct mlme_priv *pmlmepriv = &(adapter->mlmepriv);
+	struct mlme_ext_priv *pmlmeext = &(adapter->mlmeextpriv);
+
+	start = rtw_get_current_time();
+
+	pmlmeext->join_abort = abort;
+	if (abort)
+		set_link_timer(pmlmeext, 1);
+
+	while (rtw_get_passing_time_ms(start) <= timeout_ms
+		&& (check_fwstate(pmlmepriv, _FW_UNDER_LINKING)
+			#ifdef CONFIG_IOCTL_CFG80211
+			|| rtw_cfg80211_is_connect_requested(adapter)
+			#endif
+			)
+	) {
+		if (RTW_CANNOT_RUN(adapter))
+			break;
+
+		RTW_INFO(FUNC_ADPT_FMT" linking...\n", FUNC_ADPT_ARG(adapter));
+		rtw_msleep_os(20);
+	}
+
+	if (abort) {
+		if (check_fwstate(pmlmepriv, _FW_UNDER_LINKING)
+			#ifdef CONFIG_IOCTL_CFG80211
+			|| rtw_cfg80211_is_connect_requested(adapter)
+			#endif
+		) {
+			if (!RTW_CANNOT_RUN(adapter))
+				RTW_INFO(FUNC_ADPT_FMT" waiting for join_abort time out!\n", FUNC_ADPT_ARG(adapter));
+		}
+	}
+
+	pmlmeext->join_abort = 0;
+	pass_ms = rtw_get_passing_time_ms(start);
+
+	return pass_ms;
+}
+
+u32 rtw_join_abort_timeout(_adapter *adapter, u32 timeout_ms)
+{
+	return _rtw_wait_join_done(adapter, _TRUE, timeout_ms);
 }
 
 static struct sta_info *rtw_joinbss_update_stainfo(_adapter *padapter, struct wlan_network *pnetwork)
@@ -2675,7 +2725,7 @@ _func_enter_;
 		rtw_free_uc_swdec_pending_queue(adapter);
 
 		rtw_free_assoc_resources(adapter, 1);
-		rtw_indicate_disconnect(adapter);
+		rtw_indicate_disconnect(adapter, *(u16 *)pstadel->rsvd, pstadel->locally_generated);
 		rtw_free_mlme_priv_ie_data(pmlmepriv);
 
 		_enter_critical_bh(&(pmlmepriv->scanned_queue.lock), &irqL);
@@ -2828,7 +2878,7 @@ _func_enter_;
 				}
 #endif // CONFIG_INTEL_WIDI
 				DBG_871X("%s We've try roaming but fail\n", __FUNCTION__);
-				rtw_indicate_disconnect(adapter);
+				rtw_indicate_disconnect(adapter, 0, _FALSE);
 				break;
 			}
 		}
@@ -2836,12 +2886,12 @@ _func_enter_;
 	} else 
 	#endif
 	{
-		rtw_indicate_disconnect(adapter);
+		rtw_indicate_disconnect(adapter, 0, _FALSE);
 		free_scanqueue(pmlmepriv);//???
 
 #ifdef CONFIG_IOCTL_CFG80211
 		//indicate disconnect for the case that join_timeout and check_fwstate != FW_LINKED
-		rtw_cfg80211_indicate_disconnect(adapter);
+		rtw_cfg80211_indicate_disconnect(adapter, 0, _FALSE);
 #endif //CONFIG_IOCTL_CFG80211
 
  	}
@@ -2996,22 +3046,6 @@ void rtw_dynamic_check_timer_handlder(_adapter *adapter)
 
 	if (RTW_CANNOT_RUN(adapter))
 		return;
-
-	
-#ifdef CONFIG_CONCURRENT_MODE
-	if(pbuddy_adapter)
-	{
-		if(adapter->net_closed == _TRUE && pbuddy_adapter->net_closed == _TRUE)
-		{
-			return;
-		}		
-	}
-	else
-#endif //CONFIG_CONCURRENT_MODE
-	if(adapter->net_closed == _TRUE)
-	{
-		return;
-	}	
 
 #ifdef CONFIG_BT_COEXIST
 	if (is_primary_adapter(adapter)) {
@@ -3426,8 +3460,8 @@ candidate_exist:
 		else
 		#endif
 		{
-			rtw_disassoc_cmd(adapter, 0, _TRUE);
-			rtw_indicate_disconnect(adapter);
+			rtw_disassoc_cmd(adapter, 0, 0);
+			rtw_indicate_disconnect(adapter, 0, _FALSE);
 			rtw_free_assoc_resources(adapter, 0);
 		}
 	}
@@ -4663,7 +4697,7 @@ void _rtw_roaming(_adapter *padapter, struct wlan_network *tgt_network)
 					continue;
 				} else {
 					DBG_871X("%s(%d) -to roaming fail, indicate_disconnect\n", __FUNCTION__,__LINE__);
-					rtw_indicate_disconnect(padapter);
+					rtw_indicate_disconnect(padapter, 0, _FALSE);
 					break;
 				}
 			}
