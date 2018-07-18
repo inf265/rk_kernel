@@ -61,7 +61,7 @@
 		/* BT_WAKE 		= GPIO3_D2 */
 		//BT,power_gpio = <&gpio4 GPIO_D3 GPIO_ACTIVE_HIGH>;
 		BT,reset_gpio = <&gpio3 GPIO_C5 GPIO_ACTIVE_HIGH>;
-		BT,wake_gpio = <&gpio3 GPIO_D2 GPIO_ACTIVE_HIGH>;
+		//BT,wake_gpio = <&gpio3 GPIO_D2 GPIO_ACTIVE_HIGH>;
 		BT,wake_host_irq = <&gpio3 GPIO_C6 GPIO_ACTIVE_LOW>;
 
 		status = "disabled";
@@ -171,7 +171,9 @@
 
 &pinctrl {
 		init-gpios = <&gpio0 GPIO_B5 1/*13 auxin_en*/
-		&gpio3 GPIO_C5 1/*laohu*/
+		&gpio3 GPIO_C5 1/*117 music led*/
+		&gpio3 GPIO_D2 0/*122 laohu*/
+		/*&gpio1 GPIO_A7 1spk*/
 		&gpio1 GPIO_B1 0
 		&gpio1 GPIO_B0 0
 		&gpio1 GPIO_B3 0
@@ -179,16 +181,16 @@
 		&gpio2 GPIO_D1 1/*89 LED*/
 		&gpio0 GPIO_D3 1/*27 LED*/
 		&gpio0 GPIO_D4 1/*28 LED*/
-		&gpio0 GPIO_D6 1/*30 CTL_1 CODEC*/
+		&gpio0 GPIO_D6 0/*30 CTL_1 CODEC*/
 		&gpio1 GPIO_A3 0/* 35 CTL_2 CODEC*/
-		&gpio3 GPIO_C4 0 /* 116 hp con*/
+		&gpio3 GPIO_C4 1 /* 116 hp con*/
 		&gpio0 GPIO_B6 GPIO_ACTIVE_HIGH>;
 };
 
 
 &codec {
 	spk_ctl_io = <&gpio1 GPIO_A7 GPIO_ACTIVE_HIGH>;
-	//hp_ctl_io  = <&gpio3 GPIO_C4 GPIO_ACTIVE_HIGH>;
+	hp_ctl_io  = <&gpio3 GPIO_C4 GPIO_ACTIVE_HIGH>;
         spk-mute-delay = <300>;
         hp-mute-delay = <10>;
         rk312x_for_mid = <1>;
@@ -197,7 +199,7 @@
         hp_volume = <20>;
         capture_volume = <23>;
         gpio_debug = <1>;
-        codec_hp_det = <0>;
+        codec_hp_det = <1>;
 };
 
 &rk3128_cif_sensor{

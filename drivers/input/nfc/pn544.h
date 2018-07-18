@@ -26,6 +26,7 @@
  */
 #define PN544_SET_PWR	_IOW(PN544_MAGIC, 0x01, unsigned int)
 
+#define PN547_NAME "pn544"
 struct pn544_i2c_platform_data{
 	unsigned int irq_gpio;
 	unsigned int ven_gpio;

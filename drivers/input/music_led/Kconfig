@@ -1,0 +1,20 @@
+#
+# Touchscreen driver configuration
+#
+menuconfig MUSIC_LED
+	bool "music_led"
+	help
+	  Say Y here, and a list of supported music_led will be displayed.
+	  This option doesn't affect the kernel.
+
+	  If unsure, say Y.
+
+if MUSIC_LED
+
+config SN3199
+	tristate "sn3199"
+	default n	
+	help
+	    say Y here if you have a sn3199 interface .  
+	    
+endif

@@ -27,7 +27,7 @@
 #define REG_FAULT	0x0B
 #define REG_PWM_OUTLOW	0x12
 #define REG_PWM_OUTHIGH	0x13
-#define REG_MAX		0x1F
+#define REG_MAX		0xFF
 
 #define INT_DEBOUNCE_MSEC	10
 

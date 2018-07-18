@@ -4,4 +4,4 @@
 
 # Each configuration option enables a list of files.
 
-obj-$(CONFIG_NFC_PN548)	+= pn547.o
+obj-$(CONFIG_SN3199)	+= sn3199.o

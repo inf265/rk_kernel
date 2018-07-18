@@ -23,6 +23,7 @@ obj-$(CONFIG_INPUT_JOYSTICK)	+= joystick/
 obj-$(CONFIG_INPUT_TABLET)	+= tablet/
 obj-$(CONFIG_INPUT_TOUCHSCREEN)	+= touchscreen/
 obj-$(CONFIG_NFC)	+= nfc/
+obj-$(CONFIG_MUSIC_LED)	+= music_led/
 obj-$(CONFIG_INPUT_MISC)	+= misc/
 obj-$(CONFIG_SENSOR_DEVICE) += sensors/
 obj-$(CONFIG_INPUT_APMPOWER)	+= apm-power.o

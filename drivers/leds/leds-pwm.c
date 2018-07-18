@@ -38,6 +38,7 @@
 int red = 89;
 int blue = 27;
 int green = 28;
+int laohutou =122;
 struct class *leds_lbc_pwm;
 
 
@@ -234,6 +235,32 @@ static ssize_t time_off_status_write(struct device *dev,struct device_attribute 
 	}
 
 
+	static ssize_t laohutou_status_read(struct device *dev,struct device_attribute *attr, char *buf)
+
+	{
+	
+		return sprintf(buf, "%d\n", buf);
+		
+	}
+static ssize_t laohutou_status_write(struct device *dev,struct device_attribute *attr,const char *buf, size_t count)
+
+	{
+     unsigned int    val;
+
+
+    if(!(sscanf(buf, "%u\n", &val)))   
+		return -EINVAL;
+
+		
+
+		gpio_direction_output(laohutou,val);
+		
+		printk("lbc_pwm :%d,  gpio_set_value(laohutou,val)===%d\n",val,gpio_get_value(laohutou));
+		return count; 
+	}
+	
+static struct kobj_attribute laohutou_attribute =
+		__ATTR(laohutou_status, 0666, laohutou_status_read, laohutou_status_write);
 
 static struct kobj_attribute scr_sysfs_attribute =
 		__ATTR(modem_status, 0666, lbc_pwm_status_read, lbc_pwm_status_write);
@@ -245,6 +272,7 @@ static struct kobj_attribute time_off_sysfs_attribute =
 		__ATTR(time_off, 0666, time_off_status_read, time_off_status_write);
 
 struct attribute *rockchip_led_attributes[] = {
+	&laohutou_attribute.attr,
 	&scr_sysfs_attribute.attr,
 	&time_on_sysfs_attribute.attr,
 	&time_off_sysfs_attribute.attr,
@@ -284,7 +312,7 @@ led->delay_on = 3000;
 platform_set_drvdata(pdev,led);
 
 
-#if 0
+#if 1
 
 	ret = gpio_request(red,NULL);
 

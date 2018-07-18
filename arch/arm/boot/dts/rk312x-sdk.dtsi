@@ -180,18 +180,26 @@
 	ts@40 {
 		compatible = "gslX680";
 		reg = <0x40>;
-		touch-gpio = <&gpio0 GPIO_B0 IRQ_TYPE_EDGE_RISING>;
+		touch-gpio = <&gpio0 GPIO_B0 GPIO_ACTIVE_LOW>;
 		reset-gpio = <&gpio0 GPIO_D1 GPIO_ACTIVE_LOW>;	
 		max-x = <800>;
 		max-y = <480>;
 		status = "okay";
+	};  
+	
+	sn3199@64 {
+		compatible = "sn3199";
+		reg = <0x64>;
+		sdb-gpio = <&gpio3 GPIO_C5 GPIO_ACTIVE_LOW>;
+		status = "okay";
 	};   
-	nfc@50 {
-		compatible = "nfc548";
+	
+	nxp@28 {
+		compatible = "nxp,nfc-pn547";
 		reg = <0x28>;
-		nfc_int = <&gpio0 GPIO_B3 IRQ_TYPE_EDGE_RISING>;
-		nfc_ven = <&gpio0 GPIO_A2 GPIO_ACTIVE_LOW>;	
-		nfc_firm = <&gpio3 GPIO_D7 GPIO_ACTIVE_LOW>;	
+		nxp,irq-gpio= <&gpio0 GPIO_B3 IRQ_TYPE_EDGE_RISING>;
+		nxp,ven-gpio = <&gpio0 GPIO_A2 GPIO_ACTIVE_LOW>;	
+		nxp,firm-gpio = <&gpio3 GPIO_D7 GPIO_ACTIVE_LOW>;	
 		status = "okay";
 	};   
 	
