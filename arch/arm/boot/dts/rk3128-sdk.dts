@@ -99,7 +99,7 @@
 &uart0 {
         status = "okay";
         dma-names = "!tx", "!rx";
-        pinctrl-0 = <&uart0_xfer &uart0_cts>;
+        pinctrl-0 = <&uart0_xfer>;
 };
 
 &uart1{

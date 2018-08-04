@@ -41,6 +41,7 @@
 #include <sound/tlv.h>
 #include <linux/switch.h>
 #include "rk312x_codec.h"
+#include <linux/regulator/consumer.h>
 
 static int debug =1;
 module_param(debug, int, S_IRUGO|S_IWUSR);
@@ -78,6 +79,8 @@ module_param(debug, int, S_IRUGO|S_IWUSR);
 #define CAP_VOL		26	/*0-31 */
 /*with capacity or not*/
 #define WITH_CAP
+
+struct regulator *regulator_ble = NULL;
 
 struct rk312x_codec_priv {
 	void __iomem	*regbase;
@@ -2368,6 +2371,34 @@ static ssize_t ble_store(struct kobject *kobj, struct kobj_attribute *attr,
 	unsigned int    val;
 	char cmd;
 	int ret;
+	char *rgl_name;
+	int count = 10;
+	//phm
+    if(!(sscanf(buf, "%u\n", &val)))   
+		return -EINVAL;
+		
+		printk("ble_store :%d\n",val);	
+	regulator_ble = regulator_get(NULL,"rk816_ldo4");
+
+	if (regulator_ble == NULL) 
+		{
+		printk("regulator_ble ==null\n");	
+		return -EINVAL;
+		}
+
+	
+	if(val==1)
+		{
+			if (regulator_enable(regulator_ble) == 0)
+				printk("regulator_enable rk816_ldo4\n");	
+		}
+	else if(val==0)
+		{
+		if (regulator_disable(regulator_ble) == 0)
+		printk("disable rk816_ldo4\n");	
+		}
+	
+	regulator_put(regulator_ble);
 }
 
 static struct kobject *gpio_kobj;
@@ -2616,6 +2647,7 @@ static int rk312x_platform_probe(struct platform_device *pdev)
 	struct rk312x_codec_priv *rk312x;
 	struct resource *res;
 	int ret;
+	struct regulator *regulator_ble = NULL;
 
 	rk312x = devm_kzalloc(&pdev->dev, sizeof(*rk312x), GFP_KERNEL);
 	if (!rk312x) {
@@ -2625,6 +2657,16 @@ static int rk312x_platform_probe(struct platform_device *pdev)
 	}
 	rk312x_priv = rk312x;
 	platform_set_drvdata(pdev, rk312x);
+//ble enable
+//phm add
+regulator_ble = regulator_get(NULL,"rk816_ldo4");
+
+
+
+
+if (regulator_enable(regulator_ble) == 0)
+	printk("regulator_ble ldo4 ok");
+regulator_put(regulator_ble);
 
 #if 0
 	rk312x->spk_hp_switch_gpio = of_get_named_gpio_flags(rk312x_np,
