@@ -68,7 +68,7 @@ module_param(debug, int, S_IRUGO|S_IWUSR);
  *  31: 6dB
  *  Step: 1.5dB
 */
-#define  OUT_VOLUME    20
+#define  OUT_VOLUME    26
 
 /* capture vol set
  * 0: -18db
@@ -109,6 +109,7 @@ struct rk312x_codec_priv {
 	int is_rk3128;
 	int gpio_debug;
 	int codec_hp_det;
+	int if_hp;
 	enum of_gpio_flags hp_active_level;
 	enum of_gpio_flags spk_active_level;
 	unsigned int spk_volume;
@@ -413,8 +414,10 @@ static int rk312x_codec_ctl_gpio(int gpio, int level)
 		DBG("%s : rk312x is NULL\n", __func__);
 		return -EINVAL;
 	}
+
+	printk("rk312x_priv->if_hp = %d\n",rk312x_priv->if_hp);
 	if ((gpio & CODEC_SET_SPK) && rk312x_priv
-	    && rk312x_priv->spk_ctl_gpio != INVALID_GPIO) {
+	    && rk312x_priv->spk_ctl_gpio != INVALID_GPIO&&rk312x_priv->if_hp == 0) {
 	    //phm add
 	   // gpio_set_value(30,level);
 	//	gpio_set_value(35,0);
@@ -2446,11 +2449,19 @@ static irqreturn_t codec_hp_det_isr(int irq, void *data)
 	//phm add
 		DBG("%s hp det rising\n", __func__);
 		//rk312x_codec_ctl_gpio(CODEC_SET_SPK, rk312x_priv->spk_active_level);
+				gpio_direction_output(30,1);
+		gpio_direction_output(35,0);
+		gpio_set_value(rk312x_priv->spk_ctl_gpio, 1);
+		rk312x_priv->if_hp = 0;
 		writel_relaxed(val|0x10001, RK_GRF_VIRT + GRF_ACODEC_CON);
+		
 	} else if (val&0x2) {
 		DBG("%s hp det falling\n", __func__);
+	gpio_set_value(rk312x_priv->spk_ctl_gpio,0);
+	rk312x_priv->if_hp = 1;
 	//	rk312x_codec_ctl_gpio(CODEC_SET_SPK, !rk312x_priv->spk_active_level);
 		writel_relaxed(val|0x20002, RK_GRF_VIRT + GRF_ACODEC_CON);
+	
 	}
 	cancel_delayed_work(&rk312x_priv->hpdet_work);
 	schedule_delayed_work(&rk312x_priv->hpdet_work, msecs_to_jiffies(20));
@@ -2549,7 +2560,7 @@ static int rk312x_probe(struct snd_soc_codec *codec)
 	rk312x_codec->capture_active = 0;
 	rk312x_codec->line_active = 0;
 	rk312x_codec_workq = create_freezable_workqueue("rk312x-codec");
-
+	rk312x_priv->if_hp = 0;
 	if (rk312x_codec_workq == NULL) {
 		DBG("%s : rk312x_codec_workq is NULL!\n", __func__);
 		ret = -ENOMEM;

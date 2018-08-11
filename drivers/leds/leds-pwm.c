@@ -31,6 +31,14 @@
 #include <linux/of_irq.h>
 #include <linux/of_gpio.h>
 #include <linux/of.h>
+#include <linux/cdev.h>
+#include <linux/interrupt.h>
+#include <linux/gpio.h>
+#include <linux/input.h>
+#include <linux/sched.h>
+#include <linux/wait.h>
+#include <linux/delay.h>
+#include <linux/semaphore.h>
 
  #include "tp_suspend.h"
  
@@ -42,12 +50,35 @@ int laohutou =122;
 struct class *leds_lbc_pwm;
 
 
+typedef enum {
+    BUZZER_DISABLE = 0,
+    BUZZER_ENABLE,
+}BUZZER_STATUS_t;
+
+
+#define BUZZER_DELAY_TIME_HIGHT (190000) //2.7KHZ
+#define BUZZER_DELAY_TIME_LOW (190000) //2.7KHZ
+
+const unsigned long int Gamma_T32[32]={0,6000,12000,18000,24000,30000,
+36000,42000,48000,54000,60000,66000,72000,78000,84000,90000,96000,102000,108000,114000
+,120000,126000,132000,138000,142000,148000,154000,160000,166000,172000,178000,184000};
+
 struct lbc_pwm_led {
 	struct delayed_work		work;
 	struct mutex lock;
 	 int delay_off;
 	 int delay_on;
+	 unsigned long int bre_on_pwm;
+	 int bre;
 	 struct  tp_device  tp;
+	 #if 1
+    struct hrtimer mytimer;
+    ktime_t kt;     //设置定时时间	 
+    unsigned long count; //从应用空间读取的数据
+    wait_queue_head_t wait_queue;
+    BUZZER_STATUS_t status;
+	 struct semaphore sem;
+	 #endif
 
 };
 int one = 0;
@@ -61,6 +92,7 @@ int suspend1 =0;
 int suspend2 =0;
 int suspend3 =0;
 
+struct lbc_pwm_led *led;
 
 static void lbc_pwm_control(struct device *dev, int val)
 {
@@ -282,11 +314,72 @@ struct attribute *rockchip_led_attributes[] = {
 static const struct attribute_group lbc_led_group = {
 	.attrs = rockchip_led_attributes,
 };
+#if 1
+static enum hrtimer_restart    hrtimer_handler(struct hrtimer *timer)
+{
+	if(led->count%400==0)
+	led->bre =led->count/400;
+	
+	if(led->bre >=0 && led->bre <=32 )
+		{
+	led->bre_on_pwm = Gamma_T32[32- led->bre];
+	printk("led->bre ===%d,led->bre_on_pwm===%d\n",led->bre,led->bre_on_pwm);
+		}
+
+
+		if(led->count != 1){
+
+        if (gpio_get_value(red) == 1) {
+            gpio_set_value(red, 0);
+
+            led->kt = ktime_set(0, 184000 - 6000);
+            hrtimer_forward_now(&led->mytimer, led->kt);
+
+        } else {
+            gpio_set_value(red, 1);
+
+            led->kt = ktime_set(0, 6000);
+            hrtimer_forward_now(&led->mytimer, led->kt);
+        }
+			led->count --;
+			return HRTIMER_RESTART;
+		}else{
+			led->count --;
+			led->status = BUZZER_DISABLE;
+			//wake_up(&led->wait_queue);
+			return HRTIMER_NORESTART;
+		}
+
+
+    
+}
+
+static void buzzer_gpio_start(void)
+{
+    //prdebug("-----------buzzer_gpio_start------------");
+    
+
+    //高精度定时器
+	hrtimer_init(&led->mytimer,CLOCK_MONOTONIC,HRTIMER_MODE_REL);
+    led->mytimer.function = hrtimer_handler;
+    led->kt = ktime_set(0, 0);
+	
+
+
+	//led->count = 12800;
+	led->bre_on_pwm = 0;
+    hrtimer_start(&led->mytimer,led->kt,HRTIMER_MODE_REL);
+
+
+
+    
+}
+#endif
 
 static int led_pwm_probe(struct platform_device *pdev)
 {
 	int ret;
-	struct lbc_pwm_led *led;
+
 
 led = devm_kzalloc(&pdev->dev, sizeof(*led), GFP_KERNEL);
 if (!led) {
@@ -342,6 +435,25 @@ platform_set_drvdata(pdev,led);
 //class_create_file(leds_lbc_pwm, &class_attr_modem_status);
 
 
+//信号量
+//sema_init(&led->sem,1);
+
+//if(down_interruptible(&led->sem))
+	//return -ERESTARTSYS;
+
+
+//init_waitqueue_head(&led->wait_queue);
+//led->status = BUZZER_DISABLE;
+
+
+//if(led->status == BUZZER_DISABLE){
+	//启动定时器  
+//	led->status = BUZZER_ENABLE;
+
+//buzzer_gpio_start();
+//wait_event(led->wait_queue, led->status == BUZZER_DISABLE);
+
+//}
 return 0; 
 }
 
