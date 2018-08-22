@@ -83,7 +83,7 @@ static int pn547_clock_select(struct pn547_dev *pn547_dev)
 	int r = 0;
 
 	if (!strcmp(pn547_dev->clk_src_name, "BBCLK2")) {		
-		printk("nfc clk_src is BBCLK2\n");
+		//printk("nfc clk_src is BBCLK2\n");
 		pn547_dev->s_clk  =
 			clk_get(&pn547_dev->client->dev, "ref_clk");
 		if (pn547_dev->s_clk == NULL)
@@ -94,7 +94,7 @@ static int pn547_clock_select(struct pn547_dev *pn547_dev)
 	}
 	if (pn547_dev->clk_run == false) {
 		/* Set clock rate */
-		printk("pn547 clk_run = true\n");
+		//printk("pn547 clk_run = true\n");
 		r = clk_prepare_enable(pn547_dev->s_clk);
 		if (r)
 			goto err_invalid_clk;
@@ -224,7 +224,7 @@ static ssize_t pn547_dev_read(struct file *filp, char __user *buf,
 
 	memset(tmp, 0, MAX_BUFFER_SIZE);
 
-	printk("%s : reading %zu bytes.\n", __func__, count);
+	//printk("%s : reading %zu bytes.\n", __func__, count);
 
 	mutex_lock(&pn547_dev->read_mutex);
 
@@ -263,11 +263,11 @@ static ssize_t pn547_dev_read(struct file *filp, char __user *buf,
 		return -EFAULT;
 	}
 
-	printk("IFD->PC:");
+	//printk("IFD->PC:");
 	for(i = 0; i < ret; i++){
-		printk(" %02X", tmp[i]);
+		//printk(" %02X", tmp[i]);
 	}
-	printk("\n");
+	//printk("\n");
 
 	return ret;
 
@@ -288,23 +288,23 @@ static ssize_t pn547_dev_write(struct file *filp, const char __user *buf,
 	if (count > MAX_BUFFER_SIZE)
 		count = MAX_BUFFER_SIZE;
 
-	printk("pn547 i2c addr client->addr = 0x%x\n", pn547_dev->client->addr);
+	//printk("pn547 i2c addr client->addr = 0x%x\n", pn547_dev->client->addr);
 	if (copy_from_user(tmp, buf, count)) {
 		printk("%s : failed to copy from user space\n", __func__);
 		return -EFAULT;
 	}
 
-	printk("%s : writing %zu bytes.\n", __func__, count);
+	//printk("%s : writing %zu bytes.\n", __func__, count);
 
-	printk("PC->IFD:");
+	//printk("PC->IFD:");
 	for(i = 0; i < count; i++){
-		printk(" %02X", tmp[i]);
+		//printk(" %02X", tmp[i]);
 	}
-	printk("\n");
+	//printk("\n");
 	/* Write data */
 	ret = i2c_master_send(pn547_dev->client, tmp, count);
 	if (ret != count) {
-		printk("%s : i2c_master_send returned %d\n", __func__, ret);
+		//printk("%s : i2c_master_send returned %d\n", __func__, ret);
 		ret = -EIO;
 	}
 
@@ -333,7 +333,7 @@ static long pn547_dev_ioctl(struct file *filp, unsigned int cmd, unsigned long a
 		if (arg == 2) {
 			/* power on with firmware download (requires hw reset)
 			 */
-			printk("%s power on with firmware\n", __func__);
+			//printk("%s power on with firmware\n", __func__);
 			gpio_set_value(pn547_dev->ven_gpio, 1);
 			gpio_set_value(pn547_dev->firm_gpio, 1);
 			msleep(10);
@@ -343,14 +343,14 @@ static long pn547_dev_ioctl(struct file *filp, unsigned int cmd, unsigned long a
 			msleep(10);
 		} else if (arg == 1) {
 			/* power on */
-			printk("%s power on\n", __func__);
+			//printk("%s power on\n", __func__);
 			gpio_set_value(pn547_dev->firm_gpio, 0);
 			gpio_set_value(pn547_dev->ven_gpio, 1);
 			irq_set_irq_wake(pn547_dev->client->irq, 1);
 			msleep(10);
 		} else  if (arg == 0) {
 			/* power off */
-			printk("%s power off\n", __func__);
+			//printk("%s power off\n", __func__);
 			gpio_set_value(pn547_dev->firm_gpio, 0);
 			gpio_set_value(pn547_dev->ven_gpio, 0);
 			irq_set_irq_wake(pn547_dev->client->irq, 0);

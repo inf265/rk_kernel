@@ -77,6 +77,9 @@ module_param(debug, int, S_IRUGO|S_IWUSR);
  * step: 1.5db
 */
 #define CAP_VOL		26	/*0-31 */
+
+#define CAP_VOL2		11	/*0-31 */
+
 /*with capacity or not*/
 #define WITH_CAP
 
@@ -418,14 +421,10 @@ static int rk312x_codec_ctl_gpio(int gpio, int level)
 	printk("rk312x_priv->if_hp = %d\n",rk312x_priv->if_hp);
 	if ((gpio & CODEC_SET_SPK) && rk312x_priv
 	    && rk312x_priv->spk_ctl_gpio != INVALID_GPIO&&rk312x_priv->if_hp == 0) {
-	    //phm add
-	   // gpio_set_value(30,level);
-	//	gpio_set_value(35,0);
-	//	msleep(100);
 
 		gpio_direction_output(30,level);
 		gpio_direction_output(35,0);
-		msleep(100);
+		msleep(50);
 		gpio_set_value(rk312x_priv->spk_ctl_gpio, level);
 		DBG(KERN_INFO"%s set spk clt %d\n", __func__, level);
 		if(level==0)
@@ -1915,14 +1914,14 @@ static struct rk312x_reg_val_typ capture_power_down_list[] = {
  {0x9c, 0xee}, 
  {0x8c, 0x07}, 
  {0x90, 0xbb},// line in 
- {0x94, 0x20 | CAP_VOL}, 
- {0x98, CAP_VOL}, 
+ {0x94, 0x20 | CAP_VOL2}, 
+ {0x98, CAP_VOL2}, 
  {0x88, 0xf7}, 
  {0x28, 0x3c},
  /* {0x124, 0x78}, /
  / {0x164, 0x78}, */ 
- {0x10c, 0x20 | CAP_VOL}, 
- {0x14c, 0x20 | CAP_VOL},
+ {0x10c, 0x20 | CAP_VOL2}, 
+ {0x14c, 0x20 | CAP_VOL2},
  };
  #define RK312x_CODEC_LINEIN_BYPASS_LEN ARRAY_SIZE(rk312x_codec_linein_bypass)
  int isline =0;
@@ -2300,14 +2299,16 @@ static ssize_t gpio_store(struct kobject *kobj, struct kobj_attribute *attr,
 	{
 		rk312x_codec_ctl_gpio(CODEC_SET_SPK,0);
 		gpio_set_value(13, 0);
-		msleep(100);
+		rk312x->line_active = 1;
+		tchip_line_in(RK312x_CODEC_LINE_IN);
 		rk312x_codec_ctl_gpio(CODEC_SET_SPK,1);
 	}
 	if(val==1)
 	{
 		rk312x_codec_ctl_gpio(CODEC_SET_SPK,0);
 		gpio_set_value(13, 1);
-		msleep(20);
+		rk312x->line_active = 1;
+		tchip_line_in(RK312x_CODEC_LINE_IN);
 		rk312x_codec_ctl_gpio(CODEC_SET_SPK,1);
 
 	}	
@@ -2316,7 +2317,6 @@ static ssize_t gpio_store(struct kobject *kobj, struct kobj_attribute *attr,
 		rk312x->line_active = 0;
 		//phm add
 		tchip_line_in(RK312x_CODEC_PLAYBACK);
-
 		
 		//if (rk312x->spk_ctl_gpio != INVALID_GPIO) {
 			//gpio_set_value(rk312x->spk_ctl_gpio, rk312x->spk_active_level);
@@ -2331,9 +2331,9 @@ static ssize_t gpio_store(struct kobject *kobj, struct kobj_attribute *attr,
 
 	if(val==3)
 	{
-	rk312x->line_active = 1;
-		tchip_line_in(RK312x_CODEC_LINE_IN);
-		rk312x_codec_ctl_gpio(CODEC_SET_SPK,1);
+	//rk312x->line_active = 1;
+		//tchip_line_in(RK312x_CODEC_LINE_IN);
+		//rk312x_codec_ctl_gpio(CODEC_SET_SPK,1);
 
         	}
 	if(val==4)
@@ -2392,17 +2392,40 @@ static ssize_t ble_store(struct kobject *kobj, struct kobj_attribute *attr,
 	
 	if(val==1)
 		{
+		
+			regulator_disable(regulator_ble) ;
 			if (regulator_enable(regulator_ble) == 0)
 				printk("regulator_enable rk816_ldo4\n");	
 		}
 	else if(val==0)
-		{
+ 		{
+ 		//regulator_enable(regulator_ble);
 		if (regulator_disable(regulator_ble) == 0)
 		printk("disable rk816_ldo4\n");	
 		}
 	
 	regulator_put(regulator_ble);
+	return n;
 }
+
+static ssize_t aux_show(struct kobject *kobj, struct kobj_attribute *attr,
+			 char *buf)
+{
+	ssize_t			status;
+	//aux
+	gpio_direction_input(9);
+	printk("gpio_get_value(9) ===%d\n",gpio_get_value(9));
+	status = sprintf(buf, "%d\n", gpio_get_value(9));
+	return status;
+}
+
+static ssize_t aux_store(struct kobject *kobj, struct kobj_attribute *attr,
+			  const char *buf, size_t n)
+{
+
+	return n;	
+}
+
 
 static struct kobject *gpio_kobj;
 struct gpio_attribute {
@@ -2419,6 +2442,7 @@ static struct gpio_attribute gpio_attrs[] = {
 	/*     node_name    permision       show_func   store_func */
 	__ATTR(spk-ctl,  0777,  gpio_show, gpio_store),
 	__ATTR(ble,  0777,  ble_show, ble_store),
+	__ATTR(aux,  0777,  aux_show, aux_store),
 };
 
 static int rk312x_resume(struct snd_soc_codec *codec)

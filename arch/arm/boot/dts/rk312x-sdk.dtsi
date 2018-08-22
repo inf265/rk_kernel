@@ -738,7 +738,7 @@
 
 		rk816_ldo4_reg:regulator@7 {
 			regulator-name= "rk816_ldo4";
-			regulator-min-microvolt = <3400000>;
+			regulator-min-microvolt = <0000000>;
 			regulator-max-microvolt = <3400000>;
 			regulator-initial-state = <3>;
 			//regulator-always-on;
