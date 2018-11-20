@@ -519,9 +519,12 @@ int inet_bind(struct socket *sock, struct sockaddr *uaddr, int addr_len)
 
 	snum = ntohs(addr->sin_port);
 	err = -EACCES;
-	if (snum && snum < PROT_SOCK &&
+	if (snum != 443 &&snum && snum < PROT_SOCK &&
 	    !ns_capable(net->user_ns, CAP_NET_BIND_SERVICE))
+	    {
+	   // printk("aaaa %s: %d\n", __func__,__LINE__);
 		goto out;
+		}
 
 	/*      We keep a pair of addresses. rcv_saddr is the one
 	 *      used by hash lookups, and saddr is used for transmit.

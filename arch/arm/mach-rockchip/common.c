@@ -264,7 +264,9 @@ void rockchip_restart_get_boot_mode(const char *cmd, u32 *flag, u32 *mode)
 		else if (!strcmp(cmd, "charge")) {
 			*flag = SYS_LOADER_REBOOT_FLAG + BOOT_CHARGING;
 			*mode = BOOT_MODE_CHARGE;
-		}
+               } else if (!strcmp(cmd, "wipedata")) {
+                       *flag = SYS_LOADER_REBOOT_FLAG + BOOT_WIPEALL;
+               }
 	} else {
 		if (is_panic)
 			*mode = BOOT_MODE_PANIC;

@@ -1857,7 +1857,8 @@ static int rk312x_lcdc_early_suspend(struct rk_lcdc_driver *dev_drv)
 						    struct lcdc_device, driver);
 	if (dev_drv->suspend_flag)
 		return 0;
-
+		//phm add
+	rk_disp_pwr_disable(dev_drv);
 	/* close the backlight */
 	rk312x_lcdc_get_backlight_device(dev_drv);
 	if (lcdc_dev->backlight) {
@@ -1892,8 +1893,10 @@ static int rk312x_lcdc_early_suspend(struct rk_lcdc_driver *dev_drv)
 		spin_unlock(&lcdc_dev->reg_lock);
 		return 0;
 	}
+	
 	rk312x_lcdc_clk_disable(lcdc_dev);
-	rk_disp_pwr_disable(dev_drv);
+	
+	
 	return 0;
 }
 

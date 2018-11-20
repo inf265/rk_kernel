@@ -11,7 +11,7 @@
                 compatible = "pwm-backlight";
                 pwms = <&pwm0 0 25000>;
                 brightness-levels = <128 129 130 131 132 133 134 135 136 137 138 139 140 141 142 143 144 145 146 147 148 149 150 151 152 153 154 155 156 157 158 159 160 161 162 163 164 165 166 167 168 169 170 171 172 173 174 175 176 177 178 179 180 181 182 183 184 185 186 187 188 189 190 191 192 193 194 195 196 197 198 199 200 201 202 203 204 205 206 207 208 209 210 211 212 213 214 215 216 217 218 219 220 221 222 223 224 225 226 227 228 229 230 231 232 233 234 235 236 237 238 239 240 241 242 243 244 245 246 247 248 249 250 251 252 253 254 255>;
-                default-brightness-level = <255>;
+                default-brightness-level = <254>;
               //  enable-gpios = <&gpio0 GPIO_D2 GPIO_ACTIVE_HIGH>;
         };
 
@@ -83,7 +83,7 @@
                    //        |RKPM_CTR_VOL_PWM1
                            )
                    >;
-          rockchip,pmic-suspend_gpios = <GPIO3_C1>;
+          rockchip,pmic-suspend_gpios = <0>;//GPIO3_C1
      };
      
 	pwmleds {
@@ -95,6 +95,15 @@
 	};
 };
 
+
+
+&pwm1 {
+  status = "okay";
+};
+
+&pwm2 {
+  status = "okay";
+};
 
 &uart0 {
         status = "okay";
@@ -191,7 +200,7 @@
 &codec {
 	spk_ctl_io = <&gpio1 GPIO_A7 GPIO_ACTIVE_HIGH>;
 	hp_ctl_io  = <&gpio3 GPIO_C4 GPIO_ACTIVE_HIGH>;
-        spk-mute-delay = <300>;
+        spk-mute-delay = <50>;
         hp-mute-delay = <10>;
         rk312x_for_mid = <1>;
         is_rk3128 = <1>;
@@ -222,34 +231,34 @@
 		>;
 	virt-temp-limit-1-cpu-busy = <
 	/* target-temp	limit-freq */
-		75	1008000
-		85	1200000
-		95	1200000
-		100	1200000
+		75	1200000
+		85	1008000
+		95	816000
+		100	816000
 		>;
 	virt-temp-limit-2-cpu-busy = <
 	/* target-temp	limit-freq */
-		75	816000
+		75	1200000
 		85	1008000
-		95	1104000
-		100	1200000
+		95	816000
+		100	816000
 		>;
 	virt-temp-limit-3-cpu-busy = <
 	/* target-temp	limit-freq */
-		75	816000
-		85	912000
-		95	100800
-		100	110400
+		75	1200000
+		85	1008000
+		95	816000
+		100	816000
 		>;
 	virt-temp-limit-4-cpu-busy = <
 	/* target-temp	limit-freq */
-		75	816000
-		85	912000
-		95	100800
-		100	110400
+		75	1200000
+		85	1008000
+		95	816000
+		100	816000
 		>;
 	temp-limit-enable = <1>;
-	target-temp = <75>;
+	target-temp = <85>;
 	status="okay";
 };
 
@@ -267,10 +276,10 @@
 &clk_ddr_dvfs_table {
 	operating-points = <
 		/* KHz    uV */
-		//200000 950000
-		//360000 1100000
+		200000 950000
+		360000 1100000
 		400000 1200000
-		//533000 1200000
+		533000 1200000
 		>;
 
 	freq-table = <
@@ -285,10 +294,10 @@
 		SYS_STATUS_ISP		400000
 		>;
 	auto-freq-table = <
-		//240000
-		//324000
+		240000
+		324000
 		396000
-		//528000
+		528000
 		>;
 	auto-freq=<0>;
 	status="okay";

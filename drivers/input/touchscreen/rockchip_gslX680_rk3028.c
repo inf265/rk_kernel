@@ -36,7 +36,7 @@
 #define TP2680B_ID	0x82
 char chip_type=0x00;
 
-
+extern void rk_send_wakeup_key(void);
 #if defined (CONFIG_KP_AXP)
         extern int axp_gpio_set_value(int gpio, int io_state);
         extern int axp_gpio_set_io(int , int );
@@ -46,7 +46,8 @@ char chip_type=0x00;
         #define PMU_GPIO_NUM    3       
 #endif
 #endif
-
+int if_support_wakeup;
+int if_sleep;
 //#define ZED_DBG
 
 #define REPORT_DATA_ANDROID_4_0
@@ -1220,10 +1221,35 @@ static irqreturn_t gsl_ts_irq(int irq, void *dev_id)
 	{
 		queue_work(ts->wq, &ts->work);
 	}
+	//phm add
+	if(if_support_wakeup==1)
+	{
+	printk(" rk_send_wakeup_key\n");
+	rk_send_wakeup_key();
+	}
 	
 	return IRQ_HANDLED;
 
 }
+
+static ssize_t tp_wake_up_show(struct device *dev,struct device_attribute *attr, char *buf)
+{
+
+	return sprintf(buf,"%d\n",if_support_wakeup);
+}
+
+static ssize_t tp_wake_up_store(struct device *dev,
+        struct device_attribute *attr, const char *buf,size_t count)
+{
+	int ret;
+	if(!(sscanf(buf,"%d\n",&ret)))
+	return -EINVAL;
+	if_support_wakeup = ret;
+	return count;
+}
+static struct device_attribute gsl680_dev_attr =
+	__ATTR(tp_wake_up, S_IRUGO | S_IWUGO, tp_wake_up_show, tp_wake_up_store);
+
 
 static int gslX680_ts_init(struct i2c_client *client, struct gsl_ts *ts)
 {
@@ -1238,7 +1264,8 @@ static int gslX680_ts_init(struct i2c_client *client, struct gsl_ts *ts)
 		ts->dd->data_size = MAX_FINGERS * ts->dd->touch_bytes + ts->dd->touch_meta_data;
 		ts->dd->touch_index = 0;
 	}
-
+	if_support_wakeup = 0;
+	if_sleep = 0;
 	ts->touch_data = devm_kzalloc(&client->dev,ts->dd->data_size, GFP_KERNEL);
 	if (!ts->touch_data) {
 		pr_err("%s: Unable to allocate memory\n", __func__);
@@ -1300,6 +1327,10 @@ static int gslX680_ts_init(struct i2c_client *client, struct gsl_ts *ts)
 
 	INIT_WORK(&ts->work, gslX680_ts_worker);
 
+
+       device_create_file(&client->dev, &gsl680_dev_attr);
+
+
 	rc = input_register_device(input_device);
 	if (rc)
 		goto error_unreg_device;
@@ -1320,7 +1351,9 @@ static int gsl_ts_suspend(struct device *dev)
 {
 	struct gsl_ts *ts = dev_get_drvdata(dev);
 	int i;
-
+if(if_support_wakeup==0)
+{
+	if_sleep = 1;
   	printk("I'am in gsl_ts_suspend() start\n");
 	#if defined(CANCEL_RESET)
 	suspend(ts->client);
@@ -1354,7 +1387,7 @@ static int gsl_ts_suspend(struct device *dev)
 	report_data(ts, 1, 1, 10, 1);		
 	input_sync(ts->input);	
 #endif	
-
+}
 	return 0;
 }
 
@@ -1362,7 +1395,9 @@ static int gsl_ts_resume(struct device *dev)
 {
 	struct gsl_ts *ts = dev_get_drvdata(dev);
 	int i;
-	
+	if_support_wakeup = 0;
+	if(if_sleep==1)
+	{
   	printk("I'am in gsl_ts_resume() start\n");
 
 #if defined(CONFIG_BOARD_TYPE_ZM1128CE) || defined(CONFIG_BOARD_TYPE_ZM136)
@@ -1393,7 +1428,7 @@ static int gsl_ts_resume(struct device *dev)
 #endif	
 	
 	enable_irq(ts->irq);
-
+}
 	return 0;
 }
 

@@ -113,7 +113,7 @@
 		io-channels = <&adc 1>;
 
 		vol-up-key {
-			linux,code = <115>;
+			linux,code = <147>;
 			label = "volume up";
 			rockchip,adc_value = <59>;
 		};
@@ -653,7 +653,7 @@
 			regulator-always-on;
 			regulator-state-mem {
 				regulator-state-mode = <0x2>;
-				regulator-state-enabled;
+				regulator-state-disabled;
 				regulator-state-uv = <900000>;
 			};
 		};
@@ -705,7 +705,7 @@
 			regulator-min-microvolt = <2800000>;
 			regulator-max-microvolt = <2800000>;
 			regulator-initial-state = <3>;
-	//		regulator-always-on;
+			regulator-always-on;
 			regulator-state-mem {
 				regulator-state-disabled;
 				regulator-state-uv = <2800000>;
@@ -738,7 +738,7 @@
 
 		rk816_ldo4_reg:regulator@7 {
 			regulator-name= "rk816_ldo4";
-			regulator-min-microvolt = <0000000>;
+			regulator-min-microvolt = <3400000>;
 			regulator-max-microvolt = <3400000>;
 			regulator-initial-state = <3>;
 			//regulator-always-on;
@@ -781,8 +781,8 @@
 		design_capacity = <4000>;
 		design_qmax = <4100>;
 		bat_res = <120>;
-		max_input_current = <2000>;
-		max_chrg_current = <1800>;
+		max_input_current = <1750>;
+		max_chrg_current = <1600>;
 		max_chrg_voltage = <4200>;
 		sleep_enter_current = <1500>;
 		sleep_exit_current = <1500>;

@@ -4031,6 +4031,8 @@ static int selinux_socket_bind(struct socket *sock, struct sockaddr *address, in
 			inet_get_local_port_range(&low, &high);
 
 			if (snum < max(PROT_SOCK, low) || snum > high) {
+			
+				//printk("aaaa %s: %d,snum=====\n", __func__,__LINE__,snum);
 				err = sel_netport_sid(sk->sk_protocol,
 						      snum, &sid);
 				if (err)

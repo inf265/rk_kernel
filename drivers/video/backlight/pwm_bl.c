@@ -93,7 +93,7 @@ static int pwm_backlight_update_status(struct backlight_device *bl)
 	struct pwm_bl_data *pb = bl_get_data(bl);
 	int brightness = bl->props.brightness;
 	int duty_cycle;
-
+	//printk("phm--- brightness==%d\n",brightness);
 	if (bl->props.power != FB_BLANK_UNBLANK ||
 	    bl->props.fb_blank != FB_BLANK_UNBLANK ||
 	    bl->props.state & BL_CORE_FBBLANK)
@@ -111,7 +111,7 @@ static int pwm_backlight_update_status(struct backlight_device *bl)
 
 	if (pb->notify_after)
 		pb->notify_after(pb->dev, brightness);
-	printk("phm--- brightness==%d\n",brightness);
+	//printk("phm--- brightness==%d\n",brightness);
 	return 0;
 }
 

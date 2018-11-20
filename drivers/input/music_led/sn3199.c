@@ -44,14 +44,15 @@ static struct regmap *regmap_sn3199 = NULL;
 
 struct sn3199_dev	{
 	unsigned int sdb;
-	struct regmap *regmap;
+	struct regmap *m_regmap;
 	struct i2c_client	*client;
 };
 #define REG_MAX		0x1F
 
+//设备寄存器配置信息
 static const struct regmap_config sn3199_regmap = {
-	.reg_bits = 8,
-	.val_bits = 8,
+	.reg_bits = 8,	//寄存器地址位数，必须配置
+	.val_bits = 8,	//寄存器值的位数，必须配置
 	.max_register = REG_MAX,
 };
 
@@ -66,7 +67,13 @@ MODULE_DEVICE_TABLE(of, msm_match_table);
 int sn3199_i2c_read_reg(int reg, int *val)
 {
     int ret;
-    
+
+	if(regmap_sn3199 == NULL)
+	{
+		printk(" t_regmap = NULL \n");
+		return -1;
+	}
+	
     ret = regmap_read(regmap_sn3199, reg, val); 
 	
 	printk(" reg==0x%x, reg_val====0x%x\n",reg,val);	
@@ -76,7 +83,13 @@ int sn3199_i2c_read_reg(int reg, int *val)
 int sn3199_i2c_write_reg(int reg, int val)
 {
     int ret;
-    
+
+	if(regmap_sn3199 == NULL)
+	{
+		printk(" t_regmap = NULL \n");
+		return -1;
+	}
+
     ret = regmap_write(regmap_sn3199, reg, val);  
     return ret;
 }
@@ -87,15 +100,49 @@ int sn3199_i2c_write_reg(int reg, int val)
 /* sysfs interface */
 static ssize_t led_show(struct device *dev,struct device_attribute *attr, char *buf)
 {
-
-	return sprintf(buf,"%s\n","OK");
+	struct i2c_client *client = to_i2c_client(dev);
+	struct sn3199_dev *sn3199_dev = i2c_get_clientdata(client);
+	int ret = gpio_get_value(sn3199_dev->sdb);
+	return sprintf(buf,"%d\n",ret);
 }
 
+//echo 1 > sys/bus/i2c/devices/i2c-2/2-0064/led_debug
 /* debug fs, "echo @1 > /sys/bus/i2c/devices/xxx/led_debug" @1:debug_flag  */
 static ssize_t led_store(struct device *dev,
         struct device_attribute *attr, const char *buf,size_t count)
 {
 	
+	struct i2c_client *client = to_i2c_client(dev);
+	struct sn3199_dev *sn3199_dev = i2c_get_clientdata(client);
+	
+	int ret;
+	int opendev = 0;
+	if(!(sscanf(buf,"%d\n",&opendev)))
+		return -EINVAL;
+	printk("---------led_store,buf = %s,opendev = %d\n",buf,opendev);
+	if(opendev == 0){
+		//gpio_direction_output(sn3199_dev->sdb, 0);
+		ret = sn3199_i2c_write_reg(0x00,0x00);
+		if (ret < 0)
+				printk("led_store close i2c failed to access register\n"); 
+	}
+	else if(opendev == 1)
+	{
+	//gpio_direction_output(sn3199_dev->sdb, 1);
+		ret = sn3199_i2c_write_reg(0x00,0x01);
+	sn3199_i2c_write_reg(0x03,0x14);//16 off agc 00010100
+	sn3199_i2c_write_reg(0x04,0x47);
+	sn3199_i2c_write_reg(0x01,0x07);
+	sn3199_i2c_write_reg(0x07,0xff);
+	sn3199_i2c_write_reg(0x08,0xff);
+	sn3199_i2c_write_reg(0x08,0xff);
+	sn3199_i2c_write_reg(0x26,0x00);
+	sn3199_i2c_write_reg(0x10,0x00);
+		if (ret < 0)
+				printk("led_store open i2c failed to access register\n"); 
+		
+	}
+
 	return count;
 }
 
@@ -109,11 +156,10 @@ static int nfc_parse_dt(struct device *dev, struct sn3199_dev *pdata)
 	int r = 0;
 	struct device_node *np = dev->of_node;
 
-
 	pdata->sdb = of_get_named_gpio(np, "sdb-gpio", 0);
 	if ((!gpio_is_valid(pdata->sdb)))
 		return -EINVAL;
-		printk("nfc_parse_dt  sdb==%d ,val===\n",pdata->sdb,gpio_get_value(pdata->sdb));
+		printk("nfc_parse_dt  sdb==%d ,val===%d\n",pdata->sdb,gpio_get_value(pdata->sdb));
 	return r;
 }
 
@@ -122,31 +168,34 @@ static int nfc_parse_dt(struct device *dev, struct sn3199_dev *pdata)
 static int sn3199_probe(struct i2c_client *client,
 		const struct i2c_device_id *id)
 {	
-	int r = 0;
+	//int r = 0;
 	int ret;
 	struct sn3199_dev *sn3199_dev;
-	unsigned int reg_val;
+	//unsigned int reg_val;
 
 
         printk("sn3199 enter probe\n");
 	sn3199_dev = devm_kzalloc(&client->dev, sizeof(struct sn3199_dev), GFP_KERNEL);
 	if (sn3199_dev == NULL)
 		return -ENOMEM;
- 
+
+ 	//获得sdb-gpio,低电平为关断芯片 
 	sn3199_dev->sdb = of_get_named_gpio(client->dev.of_node, "sdb-gpio", 0);
 
+	//3.10版本新增regmap 初始化struct regmap
 	regmap_sn3199 = devm_regmap_init_i2c(client,&sn3199_regmap);
 	if (IS_ERR(regmap_sn3199)) {
 		dev_err(&client->dev, "regmap initialization failed\n");
 		return PTR_ERR(regmap_sn3199);
 	}
-
+	sn3199_dev->m_regmap = regmap_sn3199;
+		
     if(gpio_request(sn3199_dev->sdb,"led_int") != 0)
 	{
 	  printk("sn3199: gpio_IRQ_request error\n");
 	}
 	gpio_direction_output(sn3199_dev->sdb, 1);
-         printk("led probe GPIO is ok\n");
+         printk("music led probe GPIO is ok\n");
 
 	i2c_set_clientdata(client, sn3199_dev);
 
@@ -154,12 +203,10 @@ static int sn3199_probe(struct i2c_client *client,
 
 	//ret = sn3199_i2c_write_reg(0x07,0xff);
 	ret = sn3199_i2c_write_reg(0x00,0x01);
-	ret = sn3199_i2c_write_reg(0x03,0x14);//16 off agc
-	
-	ret = sn3199_i2c_write_reg(0x04,0x77);
+	 sn3199_i2c_write_reg(0x03,0x14);//16 off agc 00010100	
+	 sn3199_i2c_write_reg(0x04,0x47);//77is 30MA
+	 sn3199_i2c_write_reg(0x01,0x07);
 
-	ret = sn3199_i2c_write_reg(0x01,0x07);
-	
 	//ret = sn3199_i2c_write_reg(0x05,0x70);
 	//ret = sn3199_i2c_write_reg(0x1a,0x40);
 	//ret = sn3199_i2c_write_reg(0x06,0x10);
@@ -167,14 +214,15 @@ static int sn3199_probe(struct i2c_client *client,
 	sn3199_i2c_write_reg(0x08,0xff);
 	sn3199_i2c_write_reg(0x08,0xff);
 	ret = sn3199_i2c_write_reg(0x26,0x00);
-	ret = sn3199_i2c_write_reg(0x10,0x00);
+	ret = sn3199_i2c_write_reg(0x10,0x00); 
 	//msleep(100);
 	//sn3199_i2c_write_reg(0x01,0x01);
 	if (ret < 0)
-		printk("led probe i2c failed to access register\n"); 
+		printk("\n\n======================== led probe i2c failed to access register\n\n"); 
+	else
+		printk("\n\n------------------------- led probe i2c ok to access register\n\n"); 
 
-	printk("led probe successful\n");
-
+	//printk("led probe successful\n");
 
 #if defined(sn3199_DEBUG)
 		ret = device_create_file(&client->dev, &sn3199_dev_attr);
@@ -185,8 +233,7 @@ static int sn3199_probe(struct i2c_client *client,
 
 static int sn3199_remove(struct i2c_client *client)
 {
-	struct sn3199_dev *sn3199_dev;
-
+	//struct sn3199_dev *sn3199_dev;
 	//sn3199_dev = i2c_get_clientdata(client);
 
 #if defined(sn3199_DEBUG)

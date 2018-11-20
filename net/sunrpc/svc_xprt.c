@@ -510,9 +510,11 @@ int svc_port_is_privileged(struct sockaddr *sin)
 {
 	switch (sin->sa_family) {
 	case AF_INET:
+		//printk("aaaa %s: %d\n", __func__,__LINE__);
 		return ntohs(((struct sockaddr_in *)sin)->sin_port)
 			< PROT_SOCK;
 	case AF_INET6:
+		printk("aaaa %s: %d\n", __func__,__LINE__);
 		return ntohs(((struct sockaddr_in6 *)sin)->sin6_port)
 			< PROT_SOCK;
 	default:

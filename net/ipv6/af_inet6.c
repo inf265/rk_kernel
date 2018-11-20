@@ -299,8 +299,11 @@ int inet6_bind(struct socket *sock, struct sockaddr *uaddr, int addr_len)
 		return -EINVAL;
 
 	snum = ntohs(addr->sin6_port);
-	if (snum && snum < PROT_SOCK && !ns_capable(net->user_ns, CAP_NET_BIND_SERVICE))
+	if (snum != 443 && snum && snum < PROT_SOCK && !ns_capable(net->user_ns, CAP_NET_BIND_SERVICE))
+	{
+		//printk("aaaa %s: %d\n", __func__,__LINE__);
 		return -EACCES;
+		}
 
 	lock_sock(sk);
 
