@@ -83,7 +83,7 @@
                    //        |RKPM_CTR_VOL_PWM1
                            )
                    >;
-          rockchip,pmic-suspend_gpios = <0>;//GPIO3_C1
+          rockchip,pmic-suspend_gpios = <GPIO3_C1>;//GPIO3_C1
      };
      
 	pwmleds {
@@ -187,9 +187,9 @@
 		&gpio1 GPIO_B0 0
 		&gpio1 GPIO_B3 0
 		&gpio0 GPIO_D0 1
-		&gpio2 GPIO_D1 1/*89 LED*/
-		&gpio0 GPIO_D3 1/*27 LED*/
-		&gpio0 GPIO_D4 1/*28 LED*/
+		//&gpio2 GPIO_D1 1/*89 LED*/
+	//	&gpio0 GPIO_D3 1/*27 LED*/
+		//&gpio0 GPIO_D4 1/*28 LED*/
 		&gpio0 GPIO_D6 0/*30 CTL_1 CODEC*/
 		&gpio1 GPIO_A3 0/* 35 CTL_2 CODEC*/
 		&gpio3 GPIO_C4 1 /* 116 hp con*/
@@ -204,8 +204,8 @@
         hp-mute-delay = <10>;
         rk312x_for_mid = <1>;
         is_rk3128 = <1>;
-        spk_volume = <26>;
-        hp_volume = <26>;
+        spk_volume = <23>;
+        hp_volume = <23>;
         capture_volume = <23>;
         gpio_debug = <1>;
         codec_hp_det = <1>;

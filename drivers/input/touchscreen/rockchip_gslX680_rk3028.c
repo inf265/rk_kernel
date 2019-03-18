@@ -28,14 +28,16 @@
 //#include "rockchip_gslX680_rk3168.h"
 #include "gsl1680E_1024x600.h"
 #include "tp_suspend.h"
-
+#include <linux/timer.h>
+#include <linux/jiffies.h>
+#include <linux/wakelock.h>
 #include <linux/of_gpio.h>
 #define GSL_DEBUG
 
 #define TP2680A_ID	0x88
 #define TP2680B_ID	0x82
 char chip_type=0x00;
-
+struct timer_list mytimer;
 extern void rk_send_wakeup_key(void);
 #if defined (CONFIG_KP_AXP)
         extern int axp_gpio_set_value(int gpio, int io_state);
@@ -106,6 +108,8 @@ static struct i2c_client *gsl_client = NULL;
 #define WRITE_I2C_SPEED 350*1000
 #define I2C_SPEED  200*1000
 #define CLOSE_TP_POWER   0
+
+static struct wake_lock touch_wakelock;
 
 #ifdef HAVE_TOUCH_KEY
 static u16 key = 0;
@@ -250,7 +254,7 @@ static int gslX680_init(void)
 
 static int gslX680_shutdown_low(void)
 {
-	printk("gsl  gslX680_shutdown_low\n");
+	//printk("gsl  gslX680_shutdown_low\n");
 	#if   !defined(CANCEL_RESET)
 	if(this_ts->rst>1)
 	{
@@ -262,7 +266,7 @@ static int gslX680_shutdown_low(void)
 
 static int gslX680_shutdown_high(void)
 {
-	printk("gsl  gslX680_shutdown_high\n");
+	//printk("gsl  gslX680_shutdown_high\n");
 	#if   !defined(CANCEL_RESET)
 	if(this_ts->rst>1)
 	{	
@@ -421,7 +425,7 @@ static void gsl_load_fw(struct i2c_client *client)
 	//u8 read_buf[4] = {0};
 	struct fw_data *ptr_fw;
 	
-	printk("=============gsl_load_fw start==============\n");
+	//printk("=============gsl_load_fw start==============\n");
 
 #ifdef  GSLX680_COMPATIBLE  
 		if(chip_type==TP2680A_ID)
@@ -468,7 +472,7 @@ static void gsl_load_fw(struct i2c_client *client)
 		}
 	}
 
-	printk("=============gsl_load_fw end==============\n");
+	//printk("=============gsl_load_fw end==============\n");
 
 }
 
@@ -482,27 +486,27 @@ static int test_i2c(struct i2c_client *client)
 	ret = gsl_ts_read( client, 0xf0, &read_buf, sizeof(read_buf) );
 	if  (ret  < 0)  
     		rc --;
-	else
-		printk("gsl I read reg 0xf0 is %x\n", read_buf);
+//	else
+	//	printk("gsl I read reg 0xf0 is %x\n", read_buf);
 	
 	msleep(2);
 	ret = gsl_ts_write(client, 0xf0, &write_buf, sizeof(write_buf));
-	if(ret  >=  0 )
-		printk("gsl I write reg 0xf0 0x12\n");
+	//if(ret  >=  0 )
+	//	printk("gsl I write reg 0xf0 0x12\n");
 	
 	msleep(2);
 	ret = gsl_ts_read( client, 0xf0, &read_buf, sizeof(read_buf) );
 	if(ret <  0 )
 		rc --;
-	else
-		printk("gsl I read reg 0xf0 is 0x%x\n", read_buf);
+	//else
+		//printk("gsl I read reg 0xf0 is 0x%x\n", read_buf);
 
 	return rc;
 }
 static void startup_chip(struct i2c_client *client)
 {
 	u8 tmp = 0x00;
-	printk("gsl  startup_chip\n");
+	//printk("gsl  startup_chip\n");
 	
 #ifdef GSL_NOID_VERSION
   #ifdef GSLX680_COMPATIBLE
@@ -522,7 +526,7 @@ static void startup_chip(struct i2c_client *client)
 static void  suspend(struct i2c_client *client)
 {
     u8 res_adress = 0xb5;
-	printk("gsl  suspend\n");
+	//printk("gsl  suspend\n");
     gsl_ts_write(client, 0xe4, &res_adress, sizeof(res_adress));
 }
 
@@ -530,7 +534,7 @@ static void reset_chip(struct i2c_client *client)
 {
 	u8 tmp = 0x88;
 	u8 buf[4] = {0x00};
-	printk("gsl  reset_chip\n");
+	//printk("gsl  reset_chip\n");
 	
 	gsl_ts_write(client, 0xe0, &tmp, sizeof(tmp));
 	msleep(20);
@@ -562,7 +566,7 @@ static void clr_reg(struct i2c_client *client)
 static void init_chip(struct i2c_client *client)
 {
 	int rc;
-	printk("gsl  init_chip\n");
+	//printk("gsl  init_chip\n");
 	
 	gslX680_shutdown_low();	
 	msleep(20); 	
@@ -1171,7 +1175,7 @@ static void gsl_monitor_worker(struct work_struct *work)
 		bc_counter = 0;
 	if(bc_counter > 1)
 	{
-		printk("======read 0xbc: %x %x %x %x======\n",read_buf[3], read_buf[2], read_buf[1], read_buf[0]);
+	//	printk("======read 0xbc: %x %x %x %x======\n",read_buf[3], read_buf[2], read_buf[1], read_buf[0]);
 		init_chip_flag = 1;
 		bc_counter = 0;
 	}
@@ -1224,6 +1228,7 @@ static irqreturn_t gsl_ts_irq(int irq, void *dev_id)
 	//phm add
 	if(if_support_wakeup==1)
 	{
+		if_support_wakeup =0;
 	printk(" rk_send_wakeup_key\n");
 	rk_send_wakeup_key();
 	}
@@ -1351,8 +1356,13 @@ static int gsl_ts_suspend(struct device *dev)
 {
 	struct gsl_ts *ts = dev_get_drvdata(dev);
 	int i;
+	//if_support_wakeup =1;
+	//wake_lock_timeout(&touch_wakelock,msecs_to_jiffies(480000));
+	   //   mytimer.expires = jiffies+msecs_to_jiffies(480000);
+    //    add_timer(&mytimer);
+        #if 1
 if(if_support_wakeup==0)
-{
+{//phm add
 	if_sleep = 1;
   	printk("I'am in gsl_ts_suspend() start\n");
 	#if defined(CANCEL_RESET)
@@ -1362,7 +1372,7 @@ if(if_support_wakeup==0)
 	axp_gpio_set_value(3,0);
 #endif
 #ifdef GSL_MONITOR
-	printk( "gsl_ts_suspend () : cancel gsl_monitor_work\n");
+	//printk( "gsl_ts_suspend () : cancel gsl_monitor_work\n");
 	cancel_delayed_work_sync(&gsl_monitor_work);
 #endif
 	
@@ -1388,6 +1398,7 @@ if(if_support_wakeup==0)
 	input_sync(ts->input);	
 #endif	
 }
+#endif	
 	return 0;
 }
 
@@ -1396,7 +1407,11 @@ static int gsl_ts_resume(struct device *dev)
 	struct gsl_ts *ts = dev_get_drvdata(dev);
 	int i;
 	if_support_wakeup = 0;
-	if(if_sleep==1)
+	
+	//del_timer(&mytimer);
+	
+	#if 1
+	//if(if_sleep==1)
 	{
   	printk("I'am in gsl_ts_resume() start\n");
 
@@ -1429,6 +1444,7 @@ static int gsl_ts_resume(struct device *dev)
 	
 	enable_irq(ts->irq);
 }
+#endif
 	return 0;
 }
 
@@ -1465,6 +1481,19 @@ static void gsl_ts_late_resume(struct early_suspend *h)
 	gsl_ts_resume(&ts->client->dev);
 }
 #endif
+
+
+static void myfunc(unsigned long data)
+
+{
+
+
+				if_support_wakeup = 0;
+       printk("%s\n", (char *)data);
+
+
+}
+
 
 static int  gsl_ts_probe(struct i2c_client *client,
 			const struct i2c_device_id *id)
@@ -1503,6 +1532,11 @@ static int  gsl_ts_probe(struct i2c_client *client,
 		dev_err(&client->dev, "gsl GSLX680 init failed\n");
 		goto error_mutex_destroy;
 	}	
+	
+	
+	wake_lock_init(&touch_wakelock, WAKE_LOCK_SUSPEND, "touch");
+	setup_timer(&mytimer, myfunc, (unsigned long)"touch");
+	
 	
 #ifdef GSLX680_COMPATIBLE
 	judge_chip_type(client);

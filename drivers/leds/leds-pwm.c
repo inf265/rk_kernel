@@ -43,10 +43,10 @@
 
  #include "tp_suspend.h"
 
- // 89 red 27 blue 28 green
-int red = 27;//27 pwm1
-int green = 28;//pwm2
-int blue = 89;//
+
+int red = 27;//27 pwm1 Orange
+int green = 28;//pwm2 red
+int blue = 89;//green
 int laohutou =122;
 struct class *leds_lbc_pwm;
 
@@ -262,10 +262,10 @@ static int lbc_pwm_early_suspend(struct tp_device *tp_d)
 	suspend1 = two;
 	suspend2 = four;
 	suspend3 = six;
-	two = four = six =0;
-	gpio_set_value(red,0);
-	gpio_set_value(blue,0);
-	gpio_set_value(green,0);
+	//two = four = six =0;
+	//gpio_set_value(red,0);
+	//gpio_set_value(blue,0);
+	//gpio_set_value(green,0);
 	return 0;
 }
 
@@ -409,7 +409,7 @@ static ssize_t laohutou_status_write(struct device *dev,struct device_attribute 
 		}		
 	}
 
-		//gpio_direction_output(laohutou,!val);
+		gpio_direction_output(laohutou,!val);
 		
 		printk("val :%d,  gpio_set_value(laohutou,val)===%d\n",val,gpio_get_value(laohutou));
 		return count; 
@@ -443,7 +443,10 @@ static ssize_t breathled_on_status_write(struct device *dev,struct device_attrib
 		return -EINVAL;
 
 		if(val == 1)
+			{
+				printk(" enable_Gpio_led(M_LED_BLUE);  \n");
 			enable_Gpio_led(M_LED_BLUE);
+			}
 		else if(val == 2)
 			disable_Gpio_led(M_LED_BLUE);
 		else if(val == 3)
@@ -820,9 +823,15 @@ void enable_Gpio_led(LED_TYPE_t t_led)
 void disable_Gpio_led(LED_TYPE_t t_led)
 {
 	if(t_led == M_LED_BLUE)
+		{
 		G_openbreathLed =  false;
+		m_ledIsEnd = true;//phm add
+		}
 	else if(t_led == M_LED_LAOHUTOU)
+		{
 		G_openbreathLed2 =  false;
+		m_ledIsEnd2 = true;//phm add
+		}
 	return;
 }
 
@@ -840,8 +849,11 @@ void SetGpioSpeed(LED_TYPE_t t_led,const unsigned int t_timerLoopOnceCount)
 
 void Start_Gpio_led(const unsigned int t_timerLoopOnceCount)
 {
+	//printk("Start_Gpio_led 1111111111G_openbreathLed==%d\n",G_openbreathLed);
+	//printk("Start_Gpio_led 1111111111m_ledIsEnd==%d\n",m_ledIsEnd);
 	if(m_ledIsEnd && G_openbreathLed)
 	{
+		//printk("Start_Gpio_led\n");
 		m_ledIsEnd = false;
 		msleep(500);
 		SetGpioSpeed(M_LED_BLUE,t_timerLoopOnceCount);
@@ -995,9 +1007,7 @@ static int led_pwm_probe(struct platform_device *pdev)
 {
 	int ret;
 	
-	gpio_set_value(blue, 0);
-	gpio_set_value(green,0);
-	gpio_set_value(red,0);
+
 
 #if 1
 //ml==============================
@@ -1069,9 +1079,14 @@ platform_set_drvdata(pdev,led);
 
 
 
+	ret = gpio_request(blue, NULL);
+	if (ret) 
+		{
+		printk("failed to request blue gpio\n");
+		}			
+	gpio_direction_output(blue,0);
 
-
-
+		#if 0
 	ret = gpio_request(laohutou,NULL);
 
 	if (ret) 
@@ -1080,7 +1095,7 @@ platform_set_drvdata(pdev,led);
 		}			
 	gpio_direction_output(laohutou,1);
 
-#if 0
+
 
 	ret = gpio_request(red,NULL);
 
@@ -1090,13 +1105,6 @@ platform_set_drvdata(pdev,led);
 		}			
 	gpio_direction_output(red,0);
 
-		
-	ret = gpio_request(blue, NULL);
-	if (ret) 
-		{
-		printk("failed to request blue gpio\n");
-		}			
-	gpio_direction_output(blue,0);
 	
 	ret = gpio_request(green, NULL);
 	if (ret) 

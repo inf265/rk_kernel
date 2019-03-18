@@ -103,6 +103,9 @@ static int pwm_backlight_update_status(struct backlight_device *bl)
 		brightness = pb->notify(pb->dev, brightness);
 
 	if (brightness > 0) {
+		
+		if(brightness<=9)
+			brightness =10;
 		duty_cycle = compute_duty_cycle(pb, brightness);
 		pwm_config(pb->pwm, duty_cycle, pb->period);
 		pwm_backlight_power_on(pb, brightness);
@@ -111,7 +114,7 @@ static int pwm_backlight_update_status(struct backlight_device *bl)
 
 	if (pb->notify_after)
 		pb->notify_after(pb->dev, brightness);
-	//printk("phm--- brightness==%d\n",brightness);
+	printk("phm--- brightness==%d\n",brightness);
 	return 0;
 }
 

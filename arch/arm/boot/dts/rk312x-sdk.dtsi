@@ -707,7 +707,7 @@
 			regulator-initial-state = <3>;
 			regulator-always-on;
 			regulator-state-mem {
-				regulator-state-disabled;
+				regulator-state-enabled;
 				regulator-state-uv = <2800000>;
 			};
 		};
@@ -719,7 +719,7 @@
 			regulator-initial-state = <3>;
 			regulator-always-on;
 			regulator-state-mem {
-				regulator-state-disabled;
+				regulator-state-enabled;
 				regulator-state-uv = <3300000>;
 			};
 		};
@@ -744,7 +744,7 @@
 			//regulator-always-on;
 			//regulator-boot-on;
 			regulator-state-mem {
-				regulator-state-disabled;
+				regulator-state-enabled;
 				regulator-state-uv = <3400000>;
 			};
 		};
@@ -756,7 +756,7 @@
 			regulator-initial-state = <3>;
 			regulator-always-on;
 			regulator-state-mem {
-				regulator-state-disabled;
+				regulator-state-enabled;
 				regulator-state-uv = <3000000>;
 			};
 		};
@@ -768,19 +768,19 @@
 			regulator-initial-state = <3>;
 			regulator-always-on;
 			regulator-state-mem {
-				regulator-state-disabled;
+				regulator-state-enabled;
 				regulator-state-uv = <3000000>;
 			};
 		};
 	};
 
 	battery {
-		ocv_table = <3480 3599 3671 3701 3728 3746 3762
-			     3772 3781 3792 3816 3836 3866 3910
-			     3942 3971 4002 4050 4088 4132 4183>;
+		ocv_table = <3400 3455 3492 3535 3566 3592 3610
+			     3627 3647 3673 3710 3767 3829 3874
+			     3910 3948 3995 4031 4063 4118 4207>;
 		design_capacity = <4000>;
 		design_qmax = <4100>;
-		bat_res = <120>;
+		bat_res = <100>;
 		max_input_current = <1750>;
 		max_chrg_current = <1600>;
 		max_chrg_voltage = <4200>;

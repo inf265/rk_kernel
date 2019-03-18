@@ -243,6 +243,7 @@ struct rk816_battery {
 	u8				vblow_trigger;
 	u8				cvtlmt_trigger;
 	u8				cvtlmt_int_event;
+	u8				slp_dcdc_en_reg;
 	int				ocv_pre_dsoc;
 	int				ocv_new_dsoc;
 	int				max_pre_dsoc;
@@ -1339,7 +1340,10 @@ static void rk816_bat_set_current(struct rk816_battery *di, int charge_current)
 static void rk816_bat_set_chrg_param(struct rk816_battery *di,
 				     enum charger_type charger_type)
 {
-	u8 buf;
+	u8 buf, usb_ctrl, chrg_ctrl1;
+	static const char *const charge_name[] = {"UNKNOWN", "NONE_USB_DC",
+						  "NONE_USB", "USB", "AC",
+						  "DC_DC", "NONE_DC"};
 
 	switch (charger_type) {
 	case USB_DC_TYPE_NONE_CHARGER:
@@ -1418,25 +1422,105 @@ static void rk816_bat_set_chrg_param(struct rk816_battery *di,
 		break;
 	}
 
+	usb_ctrl = rk816_bat_read(di, RK816_USB_CTRL_REG);
+	chrg_ctrl1 = rk816_bat_read(di, RK816_CHRG_CTRL_REG1);
+	BAT_INFO("set charger type: %s, current: input=%d, chrg=%d\n",
+		 charge_name[charger_type],
+		 CHRG_CUR_INPUT[usb_ctrl & 0x0f],
+		 CHRG_CUR_SEL[chrg_ctrl1 & 0x0f]);
+
 	if (di->dsoc == 100 && rk816_bat_chrg_online(di))
 		di->prop_val = POWER_SUPPLY_STATUS_FULL;
 
 	rk816_bat_update_leds(di, di->prop_val);
 }
 
+/*
+ * -----: VBUS-5V
+ * #####: PMIC_INT
+ *
+ *
+ *		A	140ms	   D
+ *		|------------------>>>>>>>>>>>>>>>
+ *		|	B   C
+ * ##########################
+ *		|	    #
+ *		|   100ms   #   F    E
+ * --------------	    ##############
+ *
+ * [PMIC]
+ *	A: charger plugin event(vbus-5v on);
+ *	C: pmic reaction time finish, [A~C] = 100ms;
+ *	D: pmic switch to charging mode, start charging, [A~D] = 140ms;
+ *
+ * [Software]
+ *	B: PLUG_IN_STS=0, we think it's not charging mode, so enable otg+boost,
+ *	   but actually, PLUG_IN_STS is not effective now.
+ *	F: pmic reaction finish, PLUG_IN_STS is effective and we do check again.
+ *	E: output-5v mode really works(enable boost+otg)
+ *
+ * [Mistake detail]
+ *	1. Charger plugin at spot-A and switch to charing mode at spot-D.
+ *	2. Software check PLUG_IN_STS=0 at spot-B, so we think it's not
+ *	   charging mode and we enable boost+otg, and this really works at
+ *	   spot-E(because delay of i2c transfer or other).
+ *	3. It's a pity that pmic has been changed to charing mode at spot-D
+ *	   earlier than spot-E.
+ *
+ * After above mistake, we enable otg+boost in charing mode. Then, boost will
+ * burn off if we plugout charger.
+ *
+ * [Solution]
+ *	we should abey the rule: Don't enable boost while in charging mode.
+ * We should enable otg first at spot-B, trying to switch to output-5v mode,
+ * then delay 140ms(pmic reaction and other) to check effective PLUG_IN_STS
+ * again at spot-F, if PLUG_IN_STS=1, means it's charging mode now, we abandont
+ * enable boost and disable otg. Otherwise, we can turn on boost safely.
+ */
 static void rk816_bat_set_otg_state(struct rk816_battery *di, int state)
 {
+	u8 buf;
+
 	switch (state) {
 	case USB_OTG_POWER_ON:
+		/* (spot-B). for safe, detect vbus-5v by pmic self */
+		buf = rk816_bat_read(di, RK816_VB_MON_REG);
+		if (buf & PLUG_IN_STS) {
+			BAT_INFO("detect vbus-5v suppling, deny otg on..\n");
+			break;
+		}
+
+		/* (spot-B). enable otg, try to switch to output-5v mode */
 		rk816_bat_set_bits(di, RK816_DCDC_EN_REG2,
-				   BOOST_OTG_MASK, BOOST_ON_OTG_OFF);
-		msleep(100);
+				   BOOST_OTG_MASK, BOOST_OFF_OTG_ON);
+
+		/*
+		 * pmic need about 140ms to switch to charging mode, so wait
+		 * 140ms and check charger again. if still check vbus-5v online,
+		 * that means it's charger mode now, we should turn off boost
+		 * and otg, then return.
+		 */
+		msleep(140);
+		/* spot-F */
+		buf = rk816_bat_read(di, RK816_VB_MON_REG);
+		if (buf & PLUG_IN_STS) {
+			rk816_bat_set_bits(di, RK816_DCDC_EN_REG2,
+					   BOOST_OTG_MASK, BOOST_OTG_OFF);
+			BAT_INFO("detect vbus-5v suppling too, deny otg on\n");
+			break;
+		}
+
+		/*
+		 * reach here, means pmic switch to output-5v mode ok, it's
+		 * safe to enable boost-5v on output mode.
+		 */
 		rk816_bat_set_bits(di, RK816_DCDC_EN_REG2,
-				   BOOST_OTG_MASK, BOOST_ON_OTG_ON);
+				   BOOST_OTG_MASK, BOOST_OTG_ON);
 		break;
+
 	case USB_OTG_POWER_OFF:
 		rk816_bat_set_bits(di, RK816_DCDC_EN_REG2,
-				   BOOST_OTG_MASK, BOOST_OFF_OTG_OFF);
+				   BOOST_OTG_MASK, BOOST_OTG_OFF);
 		break;
 	default:
 		break;
@@ -1513,6 +1597,11 @@ static void rk816_bat_dc_delay_work(struct work_struct *work)
 		/* check otg supply, power on anyway */
 		if (di->otg_in) {
 			BAT_INFO("charge disable, enable otg\n");
+			/*
+			 * must wait 200ms to wait 5v-input fade away before
+			 * enable boost
+			 */
+			msleep(200);
 			rk816_bat_set_otg_state(di, USB_OTG_POWER_ON);
 		}
 	}
@@ -1825,10 +1914,18 @@ static void rk816_bat_select_chrg_cv(struct rk816_battery *di)
 		di->chrg_vol_sel = (index << CHRG_VOL_SEL_SHIFT);
 	}
 
-	for (index = 0; index < ARRAY_SIZE(CHRG_CUR_INPUT); index++) {
-		if (chrg_cur_input < CHRG_CUR_INPUT[index])
+	for (index = 2; index < ARRAY_SIZE(CHRG_CUR_INPUT); index++) {
+		if (chrg_cur_input < 850 && chrg_cur_input > 80) {
+			di->chrg_cur_input = 0x0;
 			break;
-		di->chrg_cur_input = (index << CHRG_CRU_INPUT_SHIFT);
+		} else if (chrg_cur_input <= 80) {
+			di->chrg_cur_input = 0x1;
+			break;
+		} else {
+			if (chrg_cur_input < CHRG_CUR_INPUT[index])
+				break;
+			di->chrg_cur_input = (index << CHRG_CRU_INPUT_SHIFT);
+		}
 	}
 
 	for (index = 0; index < ARRAY_SIZE(CHRG_CUR_SEL); index++) {
@@ -3944,6 +4041,10 @@ static int rk816_bat_parse_dt(struct rk816_battery *di)
 	if (ret < 0)
 		dev_err(dev, "power_off_thresd missing!\n");
 
+	ret = of_property_read_u32(np, "otg5v_suspend_enable",
+				   &pdata->otg5v_suspend_enable);
+	if (ret < 0)
+		pdata->otg5v_suspend_enable = 1;
 
 	if (!of_find_property(np, "dc_det_gpio", &length)) {
 		pdata->dc_det_pin = -1;
@@ -3956,9 +4057,12 @@ static int rk816_bat_parse_dt(struct rk816_battery *di)
 		BAT_INFO("support gpio dc\n");
 		pdata->dc_det_pin = of_get_named_gpio_flags(np, "dc_det_gpio",
 							    0, &flags);
-		if (gpio_is_valid(pdata->dc_det_pin))
+		if (gpio_is_valid(pdata->dc_det_pin)) {
 			pdata->dc_det_level =
 					(flags & OF_GPIO_ACTIVE_LOW) ? 0 : 1;
+			/* if support dc, default set power_dc2otg = 1 */
+			pdata->power_dc2otg = 1;
+		}
 	}
 
 	if (!of_find_property(np, "ntc_table", &length)) {
@@ -4088,6 +4192,25 @@ static int rk816_battery_probe(struct platform_device *pdev)
 	wake_lock_init(&batt_wake_lock, WAKE_LOCK_SUSPEND, "batt_lock");	//phm
 
 	BAT_INFO("driver version %s\n", DRIVER_VERSION);
+
+	return 0;
+
+irq_fail:
+	cancel_delayed_work(&di->dc_delay_work);
+	cancel_delayed_work(&di->bc_delay_work);
+	cancel_delayed_work(&di->bat_delay_work);
+	cancel_delayed_work(&di->calib_delay_work);
+	cancel_delayed_work(&di->irq_delay_work);
+	destroy_workqueue(di->bat_monitor_wq);
+	destroy_workqueue(di->charger_wq);
+	rk816_bat_unregister_fb_notify(di);
+	rk_bc_detect_notifier_unregister(&di->bc_detect_nb);
+	del_timer(&di->caltimer);
+	wake_lock_destroy(&di->wake_lock);
+	power_supply_unregister(&di->ac);
+	power_supply_unregister(&di->usb);
+	power_supply_unregister(&di->bat);
+
 	return ret;
 }
 
@@ -4107,6 +4230,27 @@ static int rk816_battery_suspend(struct platform_device *dev,
 	do_gettimeofday(&di->rtc_base);
 	rk816_bat_save_data(di);
 	st = (rk816_bat_read(di, RK816_SUP_STS_REG) & CHRG_STATUS_MSK) >> 4;
+	di->slp_dcdc_en_reg = rk816_bat_read(di, RK816_SLP_DCDC_EN_REG);
+
+	/* enable sleep boost5v and otg5v */
+	if (di->pdata->otg5v_suspend_enable) {
+		if ((di->otg_in && !di->dc_in) ||
+		    (di->otg_in && di->dc_in && !di->pdata->power_dc2otg)) {
+			rk816_bat_set_bits(di, RK816_SLP_DCDC_EN_REG,
+					   OTG_BOOST_SLP_ON, OTG_BOOST_SLP_ON);
+			BAT_INFO("suspend: otg 5v on\n");
+		} else {
+			/* disable sleep otg5v */
+			rk816_bat_set_bits(di, RK816_SLP_DCDC_EN_REG,
+					   OTG_BOOST_SLP_ON, 0);
+			BAT_INFO("suspend: otg 5v off\n");
+		}
+	} else {
+		/* disable sleep otg5v */
+		rk816_bat_set_bits(di, RK816_SLP_DCDC_EN_REG,
+				   OTG_BOOST_SLP_ON, 0);
+		BAT_INFO("suspend: otg 5v off\n");
+	}
 
 	/* if not CHARGE_FINISH, reinit chrg_finish_base.
 	 * avoid sleep loop in suspend and resume all the time
@@ -4155,6 +4299,9 @@ static int rk816_battery_resume(struct platform_device *dev)
 	di->sleep_sum_sec += interval_sec;
 	pwroff_vol = di->pdata->pwroff_vol;
 	st = (rk816_bat_read(di, RK816_SUP_STS_REG) & CHRG_STATUS_MSK) >> 4;
+	/* resume sleep boost5v and otg5v */
+	rk816_bat_set_bits(di, RK816_SLP_DCDC_EN_REG,
+			   OTG_BOOST_SLP_ON, di->slp_dcdc_en_reg);
 
 	if (!di->sleep_chrg_online) {
 		/* only add up discharge sleep seconds */

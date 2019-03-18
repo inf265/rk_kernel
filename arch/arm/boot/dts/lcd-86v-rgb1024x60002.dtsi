@@ -1,0 +1,32 @@
+/*
+ * RockChip. LCD_RGB1024x600 FOR 86V
+ * jinlong 
+ */
+
+
+/ {
+
+		disp_timings: display-timings {
+                        native-mode = <&timing0>;
+                        timing0: timing0 {
+				screen-type = <SCREEN_RGB>;
+				out-face    = <OUT_P565>;
+				clock-frequency = <32000000>;
+				hactive = <480>;
+				vactive = <800>;
+				hback-porch = <80>;
+				hfront-porch = <80>;
+				vback-porch = <20>;
+				vfront-porch = <20>;
+				hsync-len = <10>;
+				vsync-len = <6>;
+				hsync-active = <0>;
+				vsync-active = <0>;
+				de-active = <0>;
+				pixelclk-active = <1>;
+				swap-rb = <0>;
+				swap-rg = <0>;
+				swap-gb = <0>;
+                     	};
+               };
+};

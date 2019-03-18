@@ -68,7 +68,7 @@ module_param(debug, int, S_IRUGO|S_IWUSR);
  *  31: 6dB
  *  Step: 1.5dB
 */
-#define  OUT_VOLUME    26
+#define  OUT_VOLUME    23
 
 /* capture vol set
  * 0: -18db
@@ -446,7 +446,7 @@ static int rk312x_codec_ctl_gpio(int gpio, int level)
 	}
 
 	if ((gpio & CODEC_SET_HP) && rk312x_priv
-	    && rk312x_priv->hp_ctl_gpio != INVALID_GPIO&&rk312x_priv->if_hp == 1 && (level != gpio_get_value(rk312x_priv->hp_ctl_gpio))) {	//mladd
+	    && rk312x_priv->hp_ctl_gpio != INVALID_GPIO && (level != gpio_get_value(rk312x_priv->hp_ctl_gpio))) {	//mladd
 		if(level == 1)
 			msleep(100);
 		gpio_set_value(rk312x_priv->hp_ctl_gpio, level);

@@ -40,7 +40,7 @@
 #include <linux/of_gpio.h>
 #endif
 
-#if 0
+#if 1
 #define DBG(x...)   printk(KERN_INFO "[BT_RFKILL]: "x)
 #else
 #define DBG(x...)

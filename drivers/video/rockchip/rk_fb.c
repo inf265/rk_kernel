@@ -1156,6 +1156,8 @@ int rk_disp_pwr_enable(struct rk_lcdc_driver *dev_drv)
 			msleep(pwr_ctr->delay);
 		}
 	}
+	
+	/*
 	#ifdef LCD_RGB_SPI
 	printk("hjc:%s [%d]\n", __func__, __LINE__);
 	gpio_direction_output(cs_gpio, 0);
@@ -1184,6 +1186,8 @@ int rk_disp_pwr_enable(struct rk_lcdc_driver *dev_drv)
 	ST7701S_Sleep_out();
 	}
 	#endif
+	
+	*/
 	return 0;
 }
 
@@ -1194,6 +1198,8 @@ int rk_disp_pwr_disable(struct rk_lcdc_driver *dev_drv)
 	struct pwr_ctr *pwr_ctr;
 	struct regulator *regulator_lcd = NULL;
 	int count = 10;
+	
+	
 	#ifdef LCD_RGB_SPI
 			//	gpio_direction_output(rst_gpio, 0);
 				gpio_direction_output(cs_gpio, 0);
@@ -1206,6 +1212,7 @@ int rk_disp_pwr_disable(struct rk_lcdc_driver *dev_drv)
 			ST7701S_Sleep_in();
 			
 			return 0;
+			
 	if (list_empty(&dev_drv->pwrlist_head))
 		return 0;
 	list_for_each(pos, &dev_drv->pwrlist_head) {

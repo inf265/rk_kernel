@@ -1864,6 +1864,8 @@ static int rk312x_lcdc_early_suspend(struct rk_lcdc_driver *dev_drv)
 	if (lcdc_dev->backlight) {
 		lcdc_dev->backlight->props.fb_blank = FB_BLANK_POWERDOWN;
 		backlight_update_status(lcdc_dev->backlight);
+		
+		printk("rk312x_lcdc_early_suspend  2222222\n");
 	}
 
 	dev_drv->suspend_flag = 1;
