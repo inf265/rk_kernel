@@ -10,8 +10,8 @@
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
  * published by the Free Software Foundation.
- */
-
+ */ 
+ 
 #include <linux/module.h>
 #include <linux/kernel.h>
 #include <linux/init.h>
@@ -44,10 +44,8 @@
  #include "tp_suspend.h"
 
 
-int red = 27;//27 pwm1 Orange
-int green = 28;//pwm2 red
-int blue = 89;//green
-int laohutou =122;
+int green = 89;
+int red =122;
 struct class *leds_lbc_pwm;
 
 typedef enum {
@@ -81,7 +79,7 @@ struct pwm_device *pwm2 = NULL;
 bool G_openPwmLed = false;
 bool G_openPwm2Led = false;
 unsigned int pwm_sleeptime = 20;
-unsigned int pwm2_sleeptime = 20;
+unsigned int pwm2_sleeptime = 30;
 #define G_arrycount  72
 const unsigned long duty_ns[G_arrycount]={
 	0,100,300,500,800,1100,1400,1700,2000,2300,2600,
@@ -97,7 +95,7 @@ const unsigned long duty_ns[G_arrycount]={
 bool m_ledIsEnd = true;
 bool G_openbreathLed = false;
 bool m_LedIsUp = false;
-bool m_ledIsEnd2 = true;	//2 ----> laohutou
+bool m_ledIsEnd2 = true;	//2 ----> red
 bool G_openbreathLed2 = false;
 bool m_LedIsUp2 = false;
 #define Gamma_T32_len	39
@@ -132,7 +130,6 @@ void enable_Gpio_led(LED_TYPE_t t_led);
 void disable_Gpio_led(LED_TYPE_t t_led);
 void Start_Gpio_led(const unsigned int t_timerLoopOnceCount);
 void Start_Gpio_led2(const unsigned int t_timerLoopOnceCount);
-static void laohutou_greade_start(void);
 //========================ml 
 
 struct lbc_pwm_led {
@@ -194,27 +191,60 @@ static void lbc_pwm_control(struct device *dev, int val)
 	//g=four*10+three;
 	//b=six*10+Fives;
 
-	//printk("lbc_pwm_control----1===%d,2===%d,3===%d,4===%d,5===%d,6===%d\n",one,two,three,four,Fives,six);
+	printk("lbc_pwm_control----1===%d,2===%d,3===%d,4===%d,5===%d,6===%d\n",one,two,three,four,Fives,six);
+
+
+
+	
+#if 0
+		if(one==1)
+		gpio_set_value(red,1);
+		else
+		gpio_set_value(red,0);
+	
+		if(two==1)
+		gpio_set_value(green,1);
+		else
+		gpio_set_value(green,0);
+	
+		if(three==1)
+			pwm_config(pwm2, duty_ns[0], 5000000);
+		else
+			pwm_config(pwm2, duty_ns[G_arrycount-1], 5000000);
+
+		pwm_enable(pwm2);
+		
+#endif
+
+
 
 
 		#if 1
 			if(two==1)
-			pwm_config(pwm1, duty_ns[G_arrycount-1], 5000000);
+			gpio_set_value(red,1);
 			else
-			pwm_config(pwm1, duty_ns[0], 5000000);
+			gpio_set_value(red,0);
+
+			//printk("red========%d\n",gpio_get_value(red));
 
 			if(four==1)
-			gpio_set_value(blue,1);
+			gpio_set_value(green,1);
 			else
-			gpio_set_value(blue,0);
+			gpio_set_value(green,0);
 
 			if(six==1)
-			pwm_config(pwm2, duty_ns[G_arrycount-1], 5000000);
+				{
+				pwm_config(pwm2, duty_ns[G_arrycount-1], 5000000);
+				pwm_enable(pwm2);
+				}
 			else
-			pwm_config(pwm2, duty_ns[0], 5000000);
+				{
+				pwm_config(pwm2, duty_ns[0], 5000000);
+				pwm_enable(pwm2);
+				}
+			
 		#endif
-
-			if(one==1||three==1||Fives==1)
+	if(one==1||three==1||Fives==1)
 				schedule_delayed_work(&gpio_work,msecs_to_jiffies(5));
 				
 
@@ -229,21 +259,24 @@ static void led_pwm_led_work(struct work_struct *work)
 	//printk("led_pwm_led_work----1=%d,2=%d,3=%d,4=%d,5=%d,6=%d,G_IsOpenFlash=%d,led->delay_off = %d\n",one,two,three,four,Fives,six,G_IsOpenFlash,led->delay_off);
 
 			if(one==1&&two==1)
-				pwm_config(pwm1, duty_ns[G_arrycount-1], 5000000);
+				gpio_set_value(red,1);
 			if(three ==1&&four==1)
-				gpio_set_value(blue,1);
+				gpio_set_value(green,1);
 			if(Fives ==1&&six ==1)
 				pwm_config(pwm2, duty_ns[G_arrycount-1], 5000000);
+				
 
 			if((one==1|three==1|Fives==1))
 				msleep(flash_on);
 
 			if(one==1&&two==1)
-				pwm_config(pwm1, duty_ns[0], 5000000);
+				gpio_set_value(red,0);
 			if(three ==1&&four==1)
-				gpio_set_value(blue,0);
+				gpio_set_value(green,0);
 			if(Fives ==1&&six ==1)
 				pwm_config(pwm2, duty_ns[0], 5000000);
+				
+				
 			
 			//if((one==1|three==1|Fives==1))
 		if(G_IsOpenFlash && (one==1||three==1||Fives==1))
@@ -262,10 +295,6 @@ static int lbc_pwm_early_suspend(struct tp_device *tp_d)
 	suspend1 = two;
 	suspend2 = four;
 	suspend3 = six;
-	//two = four = six =0;
-	//gpio_set_value(red,0);
-	//gpio_set_value(blue,0);
-	//gpio_set_value(green,0);
 	return 0;
 }
 
@@ -300,7 +329,6 @@ static ssize_t lbc_pwm_status_write(struct device *dev,struct device_attribute *
 
 	if(!G_IsOpenFlash)
 	{
-		disable_Pwm_led();
 		disable_Pwm2_led();
 		disable_Gpio_led(M_LED_BLUE);
 		disable_Gpio_led(M_LED_LAOHUTOU);
@@ -312,7 +340,6 @@ static ssize_t lbc_pwm_status_write(struct device *dev,struct device_attribute *
 		if(val == 0)
 		{
 			msleep(500);
-			disable_Pwm_led();
 			disable_Pwm2_led();
 			disable_Gpio_led(M_LED_BLUE);
 			disable_Gpio_led(M_LED_LAOHUTOU);
@@ -391,27 +418,22 @@ static ssize_t laohutou_status_write(struct device *dev,struct device_attribute 
     if(!(sscanf(buf, "%u\n", &val)))   
 		return -EINVAL;
 
-	if(0 <= val && val <= 5)
+	if(0 <= val && val <= (G_arrycount-1))
 	{
 		if(val == 0)
 		{
-			G_openlaohutou_greade = false;
-			//msleep(500);
-			//gpio_set_value(laohutou,1);
+			pwm_config(pwm1, 5000000, 5000000);
+			pwm_enable(pwm1);
 		}
 		else{
-			laohutou_greade = Laohutou_T32[val - 1];
-			if(!G_openlaohutou_greade)
-			{
-				G_openlaohutou_greade = true;
-				laohutou_greade_start();	
-			}
+			pwm_config(pwm1, 4900000 - duty_ns[val], 5000000);
+			pwm_enable(pwm1);
+
 		}		
 	}
 
-		gpio_direction_output(laohutou,!val);
 		
-		printk("val :%d,  gpio_set_value(laohutou,val)===%d\n",val,gpio_get_value(laohutou));
+		printk("val %d\n \n",val);
 		return count; 
 	}
 
@@ -433,30 +455,23 @@ static ssize_t breathled_on_status_write(struct device *dev,struct device_attrib
 	
 	if(G_IsOpenFlash)
 	{
-		//printk("============= Close Flash =============\n");
+		printk("============= Close Flash =============\n");
 		G_IsOpenFlash = false;
-		gpio_set_value(blue,0);
-		pwm_config(pwm1, duty_ns[0], 5000000);
+		gpio_set_value(green,0);
+		gpio_set_value(red,0);
 		pwm_config(pwm2, duty_ns[0], 5000000);
 	}
     if(!(sscanf(buf, "%u\n", &val)))   
 		return -EINVAL;
 
 		if(val == 1)
-			{
-				printk(" enable_Gpio_led(M_LED_BLUE);  \n");
 			enable_Gpio_led(M_LED_BLUE);
-			}
 		else if(val == 2)
 			disable_Gpio_led(M_LED_BLUE);
-		else if(val == 3)
-			enable_Gpio_led(M_LED_LAOHUTOU);
-		else if(val == 4)
-			disable_Gpio_led(M_LED_LAOHUTOU);
-		else if(val == 5)
-			enable_Pwm_led();		
+        else if(val == 5)
+			enable_Gpio_led(M_LED_LAOHUTOU);		
 		else if(val == 6)
-			disable_Pwm_led();
+			disable_Gpio_led(M_LED_LAOHUTOU);
 		else if(val == 7)
 			enable_Pwm2_led();	
 		else if(val == 8)
@@ -486,39 +501,8 @@ static ssize_t pwmled_speed_status_write(struct device *dev,struct device_attrib
 	//printk("------------%s,val = %d,pwm_sleeptime = %d\n",__FUNCTION__,val,pwm_sleeptime);
 }
 
-static ssize_t laohutou_greade_read(struct device *dev,struct device_attribute *attr, char *buf)
-{
-	
-		return sprintf(buf, "%d\n", laohutou_greade);
-		
-}
 
-static ssize_t laohutou_greade_write(struct device *dev,struct device_attribute *attr,const char *buf, size_t count)
-{
-	unsigned int val;
-	if(!(sscanf(buf, "%u\n", &val)))   
-		return -EINVAL;
 
-	printk("laohutou_greade_write: val = %d\n",val);
-
-	if(0 <= val && val <= 5)
-	{
-		if(val == 0)
-		{
-			G_openlaohutou_greade = false;
-			//msleep(500);
-			//gpio_set_value(laohutou,1);
-		}
-		else{
-			laohutou_greade = Laohutou_T32[val - 1];
-			if(!G_openlaohutou_greade)
-			{
-				laohutou_greade_start();
-				G_openlaohutou_greade = true;
-			}
-		}		
-	}
-}
 
 //=========================ml
 
@@ -546,9 +530,6 @@ static struct kobj_attribute breathled_switch_attribute =
 static struct kobj_attribute pwmled_speed_attribute =
 		__ATTR(pwmled_speed, 0666, pwmled_speed_status_read, pwmled_speed_status_write);
 
-static struct kobj_attribute laohutou_greade_attribute =
-		__ATTR(laohutou_greate, 0666, laohutou_greade_read, laohutou_greade_write);
-
 
 struct attribute *rockchip_led_attributes[] = {
 	&laohutou_attribute.attr,
@@ -557,7 +538,6 @@ struct attribute *rockchip_led_attributes[] = {
 	&time_off_sysfs_attribute.attr,
 	&breathled_switch_attribute.attr,
 	&pwmled_speed_attribute.attr,
-	&laohutou_greade_attribute.attr,
 	NULL
 };
 
@@ -571,7 +551,7 @@ static enum hrtimer_restart    hrtimer_handler(struct hrtimer *timer)
 {
 	if(!G_openbreathLed)
 	{
-		gpio_set_value(blue, 0);
+		gpio_set_value(green, 0);
 		return HRTIMER_NORESTART;
 	}
 
@@ -602,14 +582,14 @@ static enum hrtimer_restart    hrtimer_handler(struct hrtimer *timer)
 
 		#if 1
 		if(led->count != 0 && !m_LedIsUp){
-        	if (gpio_get_value(blue) == 1) {
-            	gpio_set_value(blue, 0);
+        	if (gpio_get_value(green) == 1) {
+            	gpio_set_value(green, 0);
 
             	led->kt = ktime_set(0, led->bre_on_pwm);	//纳秒级别 * LOOP_ONCECOUNT(400)  (led->bre_on_pwm--)
             	hrtimer_forward_now(&led->mytimer, led->kt);
 
         	} else {
-            	gpio_set_value(blue, 1);
+            	gpio_set_value(green, 1);
 
             	led->kt = ktime_set(0, 184000 -led->bre_on_pwm);
             	hrtimer_forward_now(&led->mytimer, led->kt);
@@ -632,14 +612,14 @@ static enum hrtimer_restart    hrtimer_handler(struct hrtimer *timer)
 		{
 			//printk("=============================== led down =======================\n");
 
-			if (gpio_get_value(blue) == 1) {
-            gpio_set_value(blue, 0);
+			if (gpio_get_value(green) == 1) {
+            gpio_set_value(green, 0);
 
             led->kt = ktime_set(0,  184000 - led->bre_on_pwm);
             hrtimer_forward_now(&led->mytimer, led->kt);
 
         } else {
-            gpio_set_value(blue, 1);
+            gpio_set_value(green, 1);
 
             led->kt = ktime_set(0,  led->bre_on_pwm);
             hrtimer_forward_now(&led->mytimer, led->kt);
@@ -652,7 +632,7 @@ static enum hrtimer_restart    hrtimer_handler(struct hrtimer *timer)
 				m_LedIsUp = false;
 				m_ledIsEnd = true;
 				led->status = BUZZER_DISABLE;
-				 gpio_set_value(blue, 0);
+				 gpio_set_value(green, 0);
 				//wake_up(&led->wait_queue);
 				return HRTIMER_NORESTART;
 			}
@@ -664,9 +644,9 @@ static enum hrtimer_restart    hrtimer_handler(struct hrtimer *timer)
 
 static enum hrtimer_restart    hrtimer_handler2(struct hrtimer *timer)
 {
-	if(!G_openlaohutou_greade)
+	if(!G_openbreathLed2)
 	{
-		gpio_set_value(laohutou, 1);
+		gpio_set_value(red, 0);
 		return HRTIMER_NORESTART;
 	}
 
@@ -685,27 +665,25 @@ static enum hrtimer_restart    hrtimer_handler2(struct hrtimer *timer)
 	
 	if(led->count2%LOOP_ONCECOUNT2==0 && !m_LedIsUp2)
 	{
-		//printk("------------- led->count2 = %d, led->bre2 = %d, m_LedIsUp2 = %d\n",led->count2,led->bre2,m_LedIsUp2);
 		led->bre2--;
 	}
 	if(led->count2%LOOP_ONCECOUNT2==0 && m_LedIsUp2)
 	{
-		//printk("+++++++++++++ led->count2 = %d, led->bre2 = %d, m_LedIsUp2 = %d\n",led->count2,led->bre2,m_LedIsUp2);
 		led->bre2++;
 	}
 
 		#if 1
 		if(led->count2 != 0 && !m_LedIsUp2){
-        	if (gpio_get_value(laohutou) == 1) {
-            	gpio_set_value(laohutou, 0);
+        	if (gpio_get_value(red) == 1) {
+            	gpio_set_value(red, 0);
 
-            	led->kt2 = ktime_set(0, 184000 - led->bre_on_pwm2);	//纳秒级别 * LOOP_ONCECOUNT(400)  (led->bre_on_pwm--)
+            	led->kt2 = ktime_set(0,  led->bre_on_pwm2);	//纳秒级别 * LOOP_ONCECOUNT(400)  (led->bre_on_pwm--)
             	hrtimer_forward_now(&led->mytimer2, led->kt2);
 
         	} else {
-            	gpio_set_value(laohutou, 1);
+            	gpio_set_value(red, 1);
 
-            	led->kt2 = ktime_set(0, led->bre_on_pwm2);
+            	led->kt2 = ktime_set(0, 184000 - led->bre_on_pwm2);
             	hrtimer_forward_now(&led->mytimer2, led->kt2);
         	}
 				led->count2 --;
@@ -724,26 +702,28 @@ static enum hrtimer_restart    hrtimer_handler2(struct hrtimer *timer)
 		{
 			//printk("=============================== led down =======================\n");
 
-			if (gpio_get_value(laohutou) == 1) {
-            gpio_set_value(laohutou, 0);
-
-            led->kt2 = ktime_set(0,  led->bre_on_pwm2);
-            hrtimer_forward_now(&led->mytimer2, led->kt2);
-
-        } else {
-            gpio_set_value(laohutou, 1);
+			if (gpio_get_value(red) == 1) {
+            gpio_set_value(red, 0);
 
             led->kt2 = ktime_set(0,  184000 - led->bre_on_pwm2);
             hrtimer_forward_now(&led->mytimer2, led->kt2);
+
+        } else {
+            gpio_set_value(red, 1);
+
+            led->kt2 = ktime_set(0,  led->bre_on_pwm2);
+            hrtimer_forward_now(&led->mytimer2, led->kt2);
         }
 			led->count2 ++;
+			//gpio_set_value(red, 1);
 			//if(led->count ==(Gamma_T32_len - 23) * LOOP_ONCECOUNT)
 			if(led->bre_on_pwm2 <= Gamma_T32[20])
 			{
-				//printk("=========== 	m_ledIsEnd2 = true  =============\n");
+				printk("=========== 	m_ledIsEnd2 = true  =============\n");
 				m_LedIsUp2 = false;
 				m_ledIsEnd2 = true;
-				//led->status = BUZZER_DISABLE;
+				led->status = BUZZER_DISABLE;
+				gpio_set_value(red, 0);
 				return HRTIMER_NORESTART;
 			}
 			return HRTIMER_RESTART;
@@ -782,33 +762,6 @@ static void led2_gpio_start(void)
 }
 
 
-//laohutou greade setting
-static enum hrtimer_restart    laohutou_hrtimer_handler(struct hrtimer *timer)
-{
-	led->greade_timer.function = laohutou_hrtimer_handler;
-	if(G_openlaohutou_greade)
-	{
-		if (gpio_get_value(laohutou) == 1) {
-			gpio_set_value(laohutou, 0);
-			led->greade_kt = ktime_set(0, laohutou_greade); 
-			hrtimer_forward_now(&led->greade_timer, led->greade_kt);
-		} else {
-			gpio_set_value(laohutou, 1);
-			led->greade_kt = ktime_set(0, 184000 - laohutou_greade);
-			hrtimer_forward_now(&led->greade_timer,led->greade_kt);
-		}
-		return HRTIMER_RESTART;
-	}
-	gpio_set_value(laohutou, 1);
-	return HRTIMER_NORESTART;
-}
-
-static void laohutou_greade_start(void)
-{
-	led->greade_timer.function = laohutou_hrtimer_handler;
-	led->greade_kt = ktime_set(0, 0);	
-	hrtimer_start(&led->greade_timer,led->greade_kt,HRTIMER_MODE_REL); 
-}
 
 //GPIO
 void enable_Gpio_led(LED_TYPE_t t_led)
@@ -849,11 +802,9 @@ void SetGpioSpeed(LED_TYPE_t t_led,const unsigned int t_timerLoopOnceCount)
 
 void Start_Gpio_led(const unsigned int t_timerLoopOnceCount)
 {
-	//printk("Start_Gpio_led 1111111111G_openbreathLed==%d\n",G_openbreathLed);
-	//printk("Start_Gpio_led 1111111111m_ledIsEnd==%d\n",m_ledIsEnd);
+
 	if(m_ledIsEnd && G_openbreathLed)
 	{
-		//printk("Start_Gpio_led\n");
 		m_ledIsEnd = false;
 		msleep(500);
 		SetGpioSpeed(M_LED_BLUE,t_timerLoopOnceCount);
@@ -871,7 +822,7 @@ void Start_Gpio_led2(const unsigned int t_timerLoopOnceCount)
 		msleep(500);
 		SetGpioSpeed(M_LED_LAOHUTOU,t_timerLoopOnceCount);
 		led2_gpio_start();
-		//wait_event(led->wait_queue, led->status == BUZZER_DISABLE);
+		wait_event(led->wait_queue, led->status == BUZZER_DISABLE);
 	}
 	return;
 }
@@ -952,8 +903,8 @@ void Start_Pwm2_led(const unsigned int msleeptime)
 		msleep(msleeptime);
 		i--;
 	}
-	pwm_config(pwm1, 0, period_ns);
-	msleep(400);
+	pwm_config(pwm2, 0, period_ns);
+	msleep(100);
 }
 
 void enable_Pwm2_led()
@@ -984,7 +935,7 @@ static void Pwm_led_work(struct work_struct *work)
 	
 	struct lbc_pwm_led *led = container_of(work, struct lbc_pwm_led, work);
 	
-	Start_Pwm_led(pwm_sleeptime);	//20
+	//Start_Pwm_led(pwm_sleeptime);	//20
 
 	Start_Pwm2_led(pwm2_sleeptime);
 
@@ -1068,7 +1019,6 @@ INIT_DELAYED_WORK(&gpio_work, led_pwm_led_work);
 
 
 hrtimer_init(&led->greade_timer,CLOCK_MONOTONIC,HRTIMER_MODE_REL);
-//INIT_WORK(&wq_hrtimer, laohutou_greade_start);
 
 
 //buzzer_gpio_start();
@@ -1079,24 +1029,14 @@ platform_set_drvdata(pdev,led);
 
 
 
-	ret = gpio_request(blue, NULL);
+	ret = gpio_request(green, NULL);
 	if (ret) 
 		{
-		printk("failed to request blue gpio\n");
+		printk("failed to request green gpio\n");
 		}			
-	gpio_direction_output(blue,0);
+	gpio_direction_output(green,1);
 
-		#if 0
-	ret = gpio_request(laohutou,NULL);
-
-	if (ret) 
-		{
-		printk("failed to request red gpio\n");
-		}			
-	gpio_direction_output(laohutou,1);
-
-
-
+		#if 1
 	ret = gpio_request(red,NULL);
 
 	if (ret) 
@@ -1105,13 +1045,10 @@ platform_set_drvdata(pdev,led);
 		}			
 	gpio_direction_output(red,0);
 
+
+
+
 	
-	ret = gpio_request(green, NULL);
-	if (ret) 
-		{
-		printk("failed to request green gpio\n");
-		}			
-	gpio_direction_output(green,0);
 
 #endif
 // leds_lbc_pwm = class_create(THIS_MODULE, "leds_lbc_pwm");

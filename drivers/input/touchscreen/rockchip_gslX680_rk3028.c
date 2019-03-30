@@ -1110,10 +1110,11 @@ static void gslX680_ts_worker(struct work_struct *work)
 	
 schedule:
 #ifdef GSL_MONITOR
-	i2c_lock_flag = 0;
 i2c_lock_schedule:
+	i2c_lock_flag = 0;
+
 #endif
-	enable_irq(ts->irq);
+	//enable_irq(ts->irq);
 		
 }
 
@@ -1249,7 +1250,7 @@ static ssize_t tp_wake_up_store(struct device *dev,
 	int ret;
 	if(!(sscanf(buf,"%d\n",&ret)))
 	return -EINVAL;
-	if_support_wakeup = ret;
+	//if_support_wakeup = ret;
 	return count;
 }
 static struct device_attribute gsl680_dev_attr =
@@ -1356,12 +1357,12 @@ static int gsl_ts_suspend(struct device *dev)
 {
 	struct gsl_ts *ts = dev_get_drvdata(dev);
 	int i;
-	//if_support_wakeup =1;
+	if_support_wakeup =1;
 	//wake_lock_timeout(&touch_wakelock,msecs_to_jiffies(480000));
 	   //   mytimer.expires = jiffies+msecs_to_jiffies(480000);
     //    add_timer(&mytimer);
-        #if 1
-if(if_support_wakeup==0)
+        #if 0
+//if(if_support_wakeup==0)
 {//phm add
 	if_sleep = 1;
   	printk("I'am in gsl_ts_suspend() start\n");
@@ -1410,7 +1411,7 @@ static int gsl_ts_resume(struct device *dev)
 	
 	//del_timer(&mytimer);
 	
-	#if 1
+	#if 0
 	//if(if_sleep==1)
 	{
   	printk("I'am in gsl_ts_resume() start\n");
@@ -1442,7 +1443,7 @@ static int gsl_ts_resume(struct device *dev)
 	queue_delayed_work(gsl_monitor_workqueue, &gsl_monitor_work, 300);
 #endif	
 	
-	enable_irq(ts->irq);
+	//enable_irq(ts->irq);
 }
 #endif
 	return 0;
@@ -1552,6 +1553,7 @@ static int  gsl_ts_probe(struct i2c_client *client,
 		goto error_req_irq_fail;
 	}
 
+	enable_irq_wake(client->irq);
 	/* create debug attribute */
 	//rc = device_create_file(&ts->input->dev, &dev_attr_debug_enable);
 

@@ -68,7 +68,7 @@ module_param(debug, int, S_IRUGO|S_IWUSR);
  *  31: 6dB
  *  Step: 1.5dB
 */
-#define  OUT_VOLUME    23
+#define  OUT_VOLUME    26
 
 /* capture vol set
  * 0: -18db
@@ -2100,10 +2100,6 @@ static int rk312x_codec_power_down(int type)
 		rk312x_reset(codec);
 	}
 
-	if(rk312x_priv->if_hp == 0)
-		rk312x_codec_ctl_gpio(CODEC_SET_SPK,1);
-	else
-		rk312x_codec_ctl_gpio(CODEC_SET_HP,1);
 
 	return 0;
 }
@@ -2579,6 +2575,8 @@ static irqreturn_t codec_hp_det_isr(int irq, void *data)
 		
 	} else if (val&0x2) {
 		DBG("%s hp det falling\n", __func__);
+						gpio_direction_output(30,0);
+		gpio_direction_output(35,0);
 	gpio_set_value(rk312x_priv->spk_ctl_gpio,0);
 	rk312x_priv->if_hp = 1;
 	
@@ -2979,7 +2977,10 @@ void rk312x_platform_shutdown(struct platform_device *pdev)
 		DBG("disable codec_hp_det GRF_ACODEC_CON is 0x%x\n", val);
 		cancel_delayed_work_sync(&rk312x_priv->hpdet_work);
 	}
+//phm add
 
+		gpio_direction_output(30,0);
+		gpio_direction_output(35,0);
 	if (rk312x_priv->spk_ctl_gpio != INVALID_GPIO)
 		gpio_set_value(rk312x_priv->spk_ctl_gpio, !rk312x_priv->spk_active_level);
 
