@@ -56,9 +56,18 @@
 #include <asm/unwind.h>
 #include <asm/memblock.h>
 #include <asm/virt.h>
+#include <asm/ioctl.h>
+
+
 
 #include "atags.h"
 
+#include <linux/sysfs.h>
+#include <linux/err.h>
+
+#include <linux/fs.h>
+#include <asm/unistd.h>
+#include <asm/uaccess.h>
 
 #if defined(CONFIG_FPE_NWFPE) || defined(CONFIG_FPE_FASTFPE)
 char fpe_type[8];
@@ -116,6 +125,60 @@ struct outer_cache_fns outer_cache __read_mostly;
 EXPORT_SYMBOL(outer_cache);
 #endif
 
+
+
+
+
+#define SN_SECTOR_OP_TAG            0x41444E53 // "SNDA"
+static char sn_buf_idb[33] = {0};
+#define RKNAND_SYS_STORGAE_DATA_LEN 512
+#define RKNAND_GET_SN_SECTOR       _IOW('d', 3, unsigned int)//∂¡»°SN
+typedef struct tagRKNAND_SYS_STORGAE
+{
+	unsigned long tag;
+	unsigned long len;
+    unsigned char data[RKNAND_SYS_STORGAE_DATA_LEN];
+}RKNAND_SYS_STORGAE;
+
+/*
+read SN from IDB3,from 0-31bit
+
+int rknand_sys_storage_test_sn(void)
+{
+    u32 i;
+    int ret;
+    u16 len;
+    RKNAND_SYS_STORGAE sysData;
+    memset(sn_buf_idb,0,sizeof(sn_buf_idb));
+    int sys_fd = filp_open("/dev/rknand_sys_storage",O_RDWR,0);
+    if(sys_fd < 0){
+       // SLOGE("rknand_sys_storage open fail\n");
+       // return -1;
+    }
+    //sn
+    sysData.tag = SN_SECTOR_OP_TAG;
+    sysData.len = RKNAND_SYS_STORGAE_DATA_LEN;
+    ret = sys_ioctl(sys_fd, RKNAND_GET_SN_SECTOR, &sysData);
+   // rknand_print_hex_data("sndata:",(uint32*)sysData.data,8);
+    if(ret){
+      //  SLOGE("get sn SLOGE\n");
+      //  return -1;
+    }
+    //get the sn length
+    len =*((uint16*)sysData.data);
+    if(len > 30)
+    {
+	len =30;
+    }
+    if(len < 0)
+    {
+	len =0;
+    }
+    memcpy(sn_buf_idb,(sysData.data)+2,len);
+    //property_set("ro.serialno",sn_buf_idb);
+    return 0;
+}
+*/
 /*
  * Cached cpu_architecture() result for use by assembler code.
  * C code should use the cpu_architecture() function instead of accessing this
@@ -796,6 +859,8 @@ void __init setup_arch(char **cmdline_p)
 {
 	struct machine_desc *mdesc;
 	printk("setup_arch\n");
+	
+	//rknand_sys_storage_test_sn();
 	setup_processor();
 	mdesc = setup_machine_fdt(__atags_pointer);
 	if (!mdesc)
@@ -919,7 +984,8 @@ static const char *hwcap_str[] = {
 	"evtstrm",
 	NULL
 };
-
+#include <linux/etherdevice.h>
+extern char GetSNSectorInfo(char * pbuf);
 static int c_show(struct seq_file *m, void *v)
 {
 	int i, j;
@@ -981,7 +1047,7 @@ static int c_show(struct seq_file *m, void *v)
 
 	seq_printf(m, "Hardware\t: %s\n", machine_name);
 	seq_printf(m, "Revision\t: %04x\n", system_rev);
-	seq_printf(m, "Serial\t\t: %08x%08x\n",
+	seq_printf(m, "cpuid \t: %08x%08x\n",
 		   system_serial_high, system_serial_low);
 
 	return 0;

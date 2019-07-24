@@ -22,6 +22,7 @@
 #include <linux/of_device.h>
 #include <linux/of_gpio.h>
 #include <linux/mfd/rk816.h>
+#include <linux/clk-provider.h>
 
 /* Field Definitions */
 #define RK816_BUCK_VSEL_MASK	0x3f
@@ -47,6 +48,7 @@ static int ldo_voltage_map[] = {
 
 static struct rk8xx_regulator_data *rk8xx_reg;
 
+extern void rkclk_cpuclk_div_setting(int div) ;
 static int rk816_ldo_list_voltage(struct regulator_dev *dev, unsigned index)
 {
 	int volt;
@@ -292,22 +294,51 @@ static int rk816_dcdc_select_min_voltage(struct regulator_dev *dev,
 	return vsel;
 }
 
+
 static int rk816_dcdc_set_voltage(struct regulator_dev *dev,
 				  int min_uV, int max_uV, unsigned *selector)
 {
 	struct rk816 *rk816 = rdev_get_drvdata(dev);
 	int buck = rdev_get_id(dev) - rk8xx_reg->dcdc1_id;
-	int val, ret = 0;
+	int val, ret = 0, real_val, delay = 100;
+	int rk816_type;
+
+	rk816_type = rk816_reg_read(rk816, RK816_CHIP_VER_REG);
+	rk816_type &= RK816_CHIP_VERSION_MASK;
+
+	val = rk816_dcdc_select_min_voltage(dev, min_uV, max_uV, buck);
+	if (val < 0)
+			return val;
 
 	if (buck == 2) {
 		return 0;
-	} else {
-		val = rk816_dcdc_select_min_voltage(dev, min_uV, max_uV, buck);
-		if (val < 0)
-			return val;
-
+	} else if (buck == 3) {
 		ret = rk816_set_bits(rk816, dev->desc->vsel_reg,
 				     dev->desc->vsel_mask, val);
+	} else {
+		if ((buck == 0) && (rk816_type != RK816_TYPE_ES2)) {
+			if (min_uV > 1000000)
+				rkclk_cpuclk_div_setting(4);
+			else
+				rkclk_cpuclk_div_setting(2);
+		}
+		do {
+			ret = rk816_set_bits(rk816, dev->desc->vsel_reg,
+					     dev->desc->vsel_mask, val);
+
+			if (rk816_type == RK816_TYPE_ES2)
+				ret = rk816_set_bits(rk816, RK816_DCDC_EN_REG2,
+						     RK816_BUCK_DVS_CONFIRM,
+						     RK816_BUCK_DVS_CONFIRM);
+			real_val =
+			rk816_reg_read(rk816,
+				       dev->desc->vsel_reg)
+			&  dev->desc->vsel_mask;
+			delay--;
+		} while ((val != real_val) && (delay > 0));
+
+		if ((buck == 0) && (rk816_type != RK816_TYPE_ES2))
+			rkclk_cpuclk_div_setting(1);
 	}
 
 	if (ret < 0)
@@ -316,6 +347,9 @@ static int rk816_dcdc_set_voltage(struct regulator_dev *dev,
 
 	return ret;
 }
+
+
+
 
 static int rk816_dcdc_set_sleep_voltage(struct regulator_dev *dev, int uV)
 {

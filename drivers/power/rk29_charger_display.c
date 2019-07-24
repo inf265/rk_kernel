@@ -20,7 +20,7 @@
 #define DBG(x...)
 #endif
 
-static int pwr_on_thrsd = 3;          //power on capcity threshold
+static int pwr_on_thrsd = 1;          //power on capcity threshold
 
 static int __init pwr_on_thrsd_setup(char *str)
 {
@@ -131,7 +131,7 @@ static int  __init start_charge_logo_display(void)
 #endif
 
 	if(val_status.intval == POWER_SUPPLY_STATUS_CHARGING){
-		if (((rockchip_boot_mode() == BOOT_MODE_NORMAL) ||(rockchip_boot_mode() == BOOT_MODE_CHARGE)) || (val_capacity.intval <= pwr_on_thrsd)) {			
+		if (((rockchip_boot_mode() == BOOT_MODE_NORMAL) ||(rockchip_boot_mode() == BOOT_MODE_CHARGE))) {			
 			add_bootmode_charger_to_cmdline(1);
 			DBG("power in charge mode %d %d  %d\n\n",rockchip_boot_mode(),val_capacity.intval,pwr_on_thrsd);
 			return 0;

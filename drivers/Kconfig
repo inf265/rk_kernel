@@ -1,5 +1,6 @@
 menu "Device Drivers"
 
+
 source "drivers/base/Kconfig"
 
 source "drivers/bus/Kconfig"
@@ -175,5 +176,10 @@ source "drivers/gator/Kconfig"
 source "drivers/headset_observe/Kconfig"
 
 source "drivers/android/Kconfig"
+
+source "drivers/soc/Kconfig"
+
+source "drivers/rk_nand/Kconfig"
+
 
 endmenu

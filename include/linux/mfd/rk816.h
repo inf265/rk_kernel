@@ -354,6 +354,10 @@
 #define RK816_PWRON_FALL_RISE_INT_EN		0x9f
 #define DEV_OFF					(1 << 0)
 
+#define RK816_CHIP_VERSION_MASK			0x0f
+#define RK816_TYPE_ES2				0x5
+#define RK816_BUCK_DVS_CONFIRM			BIT(7)
+
 enum rk805_reg_id {
 	RK805_ID_DCDC1,
 	RK805_ID_DCDC2,

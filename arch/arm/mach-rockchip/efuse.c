@@ -477,6 +477,17 @@ static void __init rk3288_efuse_init(void)
 		pr_err("failed to read eFuse, return %d\n", ret);
 	}
 }
+static void __init rk312x_set_system_serial(void)
+{
+	int i;
+	u8 buf[24];
+	for (i = 0; i < 11; i++) {
+		buf[i] = efuse_buf[8 + (i << 1)];
+		buf[i + 11] = efuse_buf[7 + (i << 1)];
+	}
+	system_serial_low = crc32(0, buf, 11);
+	system_serial_high = crc32(system_serial_low, buf + 11, 11);
+}
 
 void __init rockchip_efuse_init(void)
 {
@@ -487,7 +498,10 @@ void __init rockchip_efuse_init(void)
 	} else if (cpu_is_rk312x()) {
 		ret = rk312x_efuse_readregs(0, 32, efuse_buf);
 		if (ret == 32)
+			{
 			efuse.get_leakage = rk3288_get_leakage;
+			rk312x_set_system_serial();
+    	}
 		else
 			pr_err("failed to read eFuse, return %d\n", ret);
 	}

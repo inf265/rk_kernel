@@ -12,6 +12,9 @@
 #include <linux/semaphore.h>
 #include <linux/clk.h>
 
+
+
+
 #define RKNAND_VERSION_AND_DATE  "rknandbase v1.0 2014-03-31"
 
 #ifdef CONFIG_OF

@@ -78,7 +78,7 @@ module_param(debug, int, S_IRUGO|S_IWUSR);
 */
 #define CAP_VOL		26	/*0-31 */
 
-#define CAP_VOL2		11	/*0-31 */
+#define CAP_VOL2		15	/*0-31 */
 
 /*with capacity or not*/
 #define WITH_CAP
@@ -1768,6 +1768,7 @@ static int rk312x_hw_params(struct snd_pcm_substream *substream,
 
 static void rk312x_codec_unpop(struct work_struct *work)
 {
+	DBG("%s %d : rk312x is phm\n", __func__,__LINE__);
 	rk312x_codec_ctl_gpio(CODEC_SET_SPK, rk312x_priv->spk_active_level);
 }
 
@@ -1777,8 +1778,10 @@ static int rk312x_digital_mute(struct snd_soc_dai *dai, int mute)
 	if (mute) {
 		if(rk312x_priv->line_active==0)
 			{
+				DBG("%s %d : rk312x is phm\n", __func__,__LINE__);
 		rk312x_codec_ctl_gpio(CODEC_SET_SPK, !rk312x_priv->spk_active_level);
 		rk312x_codec_ctl_gpio(CODEC_SET_HP, !rk312x_priv->hp_active_level);
+		//tchip_line_in(RK312x_CODEC_PLAYBACK);
 			}
 	} else {
 		if (!rk312x_priv->rk312x_for_mid) {
@@ -1788,6 +1791,12 @@ static int rk312x_digital_mute(struct snd_soc_dai *dai, int mute)
 			switch (rk312x_priv->playback_path) {
 			case SPK_PATH:
 			case RING_SPK:
+				DBG("%s %d : rk312x is phm\n", __func__,__LINE__);
+				
+			//	if(rk312x_priv->line_active==0)
+			//	tchip_line_in(RK312x_CODEC_PLAYBACK);
+				
+				
 				rk312x_codec_ctl_gpio(CODEC_SET_SPK,
 					rk312x_priv->spk_active_level);
 				rk312x_codec_ctl_gpio(CODEC_SET_HP,
@@ -1797,6 +1806,7 @@ static int rk312x_digital_mute(struct snd_soc_dai *dai, int mute)
 			case HP_NO_MIC:
 			case RING_HP:
 			case RING_HP_NO_MIC:
+				DBG("%s %d : rk312x is phm\n", __func__,__LINE__);
 				rk312x_codec_ctl_gpio(CODEC_SET_SPK,
 					!rk312x_priv->spk_active_level);
 				rk312x_codec_ctl_gpio(CODEC_SET_HP,
@@ -1804,6 +1814,7 @@ static int rk312x_digital_mute(struct snd_soc_dai *dai, int mute)
 				break;
 			case SPK_HP:
 			case RING_SPK_HP:
+				DBG("%s %d : rk312x is phm\n", __func__,__LINE__);
 				rk312x_codec_ctl_gpio(CODEC_SET_SPK,
 					rk312x_priv->spk_active_level);
 				rk312x_codec_ctl_gpio(CODEC_SET_HP,
@@ -1816,7 +1827,7 @@ static int rk312x_digital_mute(struct snd_soc_dai *dai, int mute)
 	}
 	return 0;
 }
-
+ 
 static struct rk312x_reg_val_typ playback_power_up_list[] = {
 	{0x18, 0x32},
 	{0xa0, 0x40|0x08},
@@ -1832,10 +1843,10 @@ static struct rk312x_reg_val_typ playback_power_up_list[] = {
 
 	{0xa4, 0x88},
 	{0xa4, 0xcc},
-	{0xa4, 0xee},
+	{0xa4, 0xee}, 
 	{0xa4, 0xff},
 
-	/* {0xa8, 0x44}, */
+	/* {0xa8, 0x44}, */ 
 	/* {0xb0, 0x92}, */
 	/* {0xb0, 0xdb}, */
 	{0xac, 0x11}, /*DAC*/
@@ -1847,7 +1858,7 @@ static struct rk312x_reg_val_typ playback_power_up_list[] = {
 	{0xb4, OUT_VOLUME},
 	{0xb8, OUT_VOLUME},
 	/* {0xb0, 0xff}, */
-	{0xb0, 0xff},
+	{0xb0, 0xff}, 
 	{0xa0, 0x73|0x08},
 };
 #define RK312x_CODEC_PLAYBACK_POWER_UP_LIST_LEN ARRAY_SIZE( \
@@ -1993,6 +2004,8 @@ static int rk312x_codec_power_up(int type)
 {
 	struct snd_soc_codec *codec = rk312x_priv->codec;
 	int i;
+		int count = 5;
+	int rec_config = 1;
 
 	if (!rk312x_priv || !rk312x_priv->codec) {
 		DBG("%s : rk312x_priv or rk312x_priv->codec is NULL\n",
@@ -2016,13 +2029,23 @@ static int rk312x_codec_power_up(int type)
 		tchip_line_in(RK312x_CODEC_LINE_IN);
 			else
 				{
-
-		for (i = 0; i < RK312x_CODEC_PLAYBACK_POWER_UP_LIST_LEN; i++) {
-			snd_soc_write(codec, playback_power_up_list[i].reg,
+		while(count-- && rec_config)
+		{
+			for (i = 0; i < RK312x_CODEC_PLAYBACK_POWER_UP_LIST_LEN; i++) {
+				snd_soc_write(codec, playback_power_up_list[i].reg,
 				      playback_power_up_list[i].value);
-			usleep_range(1000, 1100);
+				usleep_range(1000, 1100);
+				if(playback_power_up_list[i].value != snd_soc_read(codec,playback_power_up_list[i].reg)){
+					rec_config = 1;
+					printk("----read val != write val, rec_config\n");
+					break;
+				}else 
+					rec_config = 0;
+				
+				
+			}		
 		}
-				}
+		}
 
 
 
@@ -2050,7 +2073,7 @@ static int rk312x_codec_power_up(int type)
 				    RK312x_MUXINL_F_MSK | RK312x_MUXINR_F_MSK,
 				    RK312x_MUXINR_F_INR | RK312x_MUXINL_F_INL);
 	}
-
+DBG("%s %d : rk312x is phm\n", __func__,__LINE__);
 	if(rk312x_priv->if_hp == 0)
 		rk312x_codec_ctl_gpio(CODEC_SET_SPK,1);
 	else
@@ -2329,10 +2352,10 @@ static int rk312x_suspend(struct snd_soc_codec *codec)
 		if (rk312x_codec_work_capture_type != RK312x_CODEC_WORK_NULL)
 			rk312x_codec_work_capture_type = RK312x_CODEC_WORK_NULL;
 
-		rk312x_codec_power_down(RK312x_CODEC_PLAYBACK);
-		rk312x_codec_power_down(RK312x_CODEC_ALL);
-		snd_soc_write(codec, RK312x_SELECT_CURRENT, 0x1e);
-		snd_soc_write(codec, RK312x_SELECT_CURRENT, 0x3e);
+		//rk312x_codec_power_down(RK312x_CODEC_PLAYBACK);
+	//	rk312x_codec_power_down(RK312x_CODEC_ALL);
+		//snd_soc_write(codec, RK312x_SELECT_CURRENT, 0x1e);
+		//snd_soc_write(codec, RK312x_SELECT_CURRENT, 0x3e);
 	} else {
 		rk312x_set_bias_level(codec, SND_SOC_BIAS_OFF);
 	}
@@ -2407,7 +2430,7 @@ static ssize_t gpio_store(struct kobject *kobj, struct kobj_attribute *attr,
 			rk312x_codec_ctl_gpio(CODEC_SET_HP,0);
 		
 		tchip_line_in(RK312x_CODEC_PLAYBACK);
-
+ 
 		if(rk312x_priv->if_hp == 0)
 			rk312x_codec_ctl_gpio(CODEC_SET_SPK,1);
 		else
@@ -2507,7 +2530,18 @@ static ssize_t aux_show(struct kobject *kobj, struct kobj_attribute *attr,
 static ssize_t aux_store(struct kobject *kobj, struct kobj_attribute *attr,
 			  const char *buf, size_t n)
 {
-
+	
+		unsigned int    val;
+		    if(!(sscanf(buf, "%u\n", &val)))   
+		return -EINVAL;
+		printk("aux_store   val=======%d\n",val);
+		if(val==1)
+		rk312x_codec_ctl_gpio(CODEC_SET_SPK,1);
+		if(val==2)
+		rk312x_codec_ctl_gpio(CODEC_SET_HP,0);
+		if(val==3)
+			tchip_line_in(RK312x_CODEC_PLAYBACK);
+		
 	return n;	
 }
 
@@ -2585,7 +2619,7 @@ static irqreturn_t codec_hp_det_isr(int irq, void *data)
 	
 	}
 	cancel_delayed_work(&rk312x_priv->hpdet_work);
-	schedule_delayed_work(&rk312x_priv->hpdet_work, msecs_to_jiffies(20));
+	schedule_delayed_work(&rk312x_priv->hpdet_work, msecs_to_jiffies(40));
 	return IRQ_HANDLED;
 }
 static void hpdet_work_func(struct work_struct *work)

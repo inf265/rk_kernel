@@ -29,7 +29,7 @@
 #include <sound/dmaengine_pcm.h>
 
 
-#undef CONFIG_ARCH_ROCKCHIP
+//#undef CONFIG_ARCH_ROCKCHIP
 
 struct dmaengine_pcm_runtime_data {
 	struct dma_chan *dma_chan;

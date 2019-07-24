@@ -38,6 +38,9 @@ void cru_writel(u32 val, u32 offset)
 	writel_relaxed(val, rk_cru_base + (offset));
 	dsb(sy);
 }
+ void rkclk_cpuclk_div_setting(int div) {
+ cru_writel((0x001f0000 | (div - 1)), RK3036_CRU_CLKSELS_CON(0));
+}
 
 u32 grf_readl(u32 offset)
 {

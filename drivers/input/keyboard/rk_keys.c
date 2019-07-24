@@ -153,7 +153,7 @@ static void keys_timer(unsigned long _data)
 				aaa =0;
 				if (button->long_press_count > 88) {
 					// KEY KEY_KP7 71
-					
+					rk_send_wakeup_key();
 					input_report_key(input, KEY_KP7, 0);
 					input_sync(input);
 				} else {
@@ -262,6 +262,7 @@ static void keys_timer(unsigned long _data)
 if(aaa==1 && button->long_press_count > 88)
 	{
 	aaa =0;
+	rk_send_wakeup_key();
 	input_report_key(input, KEY_KP7, 1);
 	input_sync(input);
 key_dbg(pdata, "KEY_KP7 11111[%d].", KEY_KP7);

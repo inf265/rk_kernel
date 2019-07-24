@@ -113,7 +113,7 @@ static int pwm_backlight_update_status(struct backlight_device *bl)
 
 	if (pb->notify_after)
 		pb->notify_after(pb->dev, brightness);
-	printk("phm--- brightness==%d\n",brightness);
+	//printk("phm--- brightness==%d\n",brightness);
 	return 0;
 }
 

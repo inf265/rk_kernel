@@ -751,13 +751,13 @@
 
 		rk816_ldo5_reg: regulator@8 {
 			regulator-name = "rk816_ldo5";
-			regulator-min-microvolt = <3000000>;
-			regulator-max-microvolt = <3000000>;
+			regulator-min-microvolt = <3300000>;
+			regulator-max-microvolt = <3300000>;
 			regulator-initial-state = <3>;
 			regulator-always-on;
 			regulator-state-mem {
 				regulator-state-enabled;
-				regulator-state-uv = <3000000>;
+				regulator-state-uv = <3300000>;
 			};
 		};
 
@@ -775,7 +775,7 @@
 	};
 
 	battery {
-		ocv_table = <3400 3455 3492 3535 3566 3592 3610
+		ocv_table = <3410 3465 3502 3535 3566 3592 3610
 			     3627 3647 3673 3710 3767 3829 3874
 			     3910 3948 3995 4031 4063 4118 4207>;
 		design_capacity = <4000>;
@@ -787,7 +787,7 @@
 		sleep_enter_current = <1500>;
 		sleep_exit_current = <1500>;
 		sleep_filter_current = <100>;
-		power_off_thresd = <3400>;
+		power_off_thresd = <3410>;
 		zero_algorithm_vol = <3850>;
 		fb_temperature = <115>;
 		energy_mode = <0>;
