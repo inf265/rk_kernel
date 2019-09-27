@@ -1906,9 +1906,9 @@ static struct rk312x_reg_val_typ capture_power_up_list[] = {
 	{0x14c, 0x20 | CAP_VOL},
 	/*close left channel*/
 	{0x90, 0x07},
-	{0x88, 0xd7},
-	{0x8c, 0x07},
-	{0x9c, 0x0e},
+	{0x88, 0xf7},
+	{0x8c, 0x77},
+	{0x9c, 0xee},
 
 };
 #define RK312x_CODEC_CAPTURE_POWER_UP_LIST_LEN ARRAY_SIZE(capture_power_up_list)
@@ -1946,10 +1946,10 @@ static struct rk312x_reg_val_typ capture_power_down_list[] = {
  {0xa8, 0x44}, 
  {0xb0, 0x92}, 
  {0xb0, 0xdb}, 
- {0xac, 0x42}, /*bypass*/ 
+ {0xac, 0x35}, /*bypass*/ 
  {0xa8, 0x55}, 
  {0xa8, 0x77}, 
- {0xa4, 0xff}, 
+ {0xa4, 0xff},  
  {0xb0, 0xff}, 
  {0xa0, 0x73|0x08}, 
  {0xb4, OUT_VOLUME}, 
@@ -1984,6 +1984,7 @@ static struct rk312x_reg_val_typ capture_power_down_list[] = {
  	if(type == RK312x_CODEC_LINE_IN&&isline==0){
  		for (i = 0; i < RK312x_CODEC_LINEIN_BYPASS_LEN; i++){
  			snd_soc_write(codec,rk312x_codec_linein_bypass[i].reg,rk312x_codec_linein_bypass[i].value);
+ 			usleep_range(1000, 1100);
  		}
 		isline =1;
  	printk("%s RK312x_CODEC_LINE_IN enable\n",__FUNCTION__);
@@ -1994,6 +1995,7 @@ static struct rk312x_reg_val_typ capture_power_down_list[] = {
 		isline = 0;
  		for (i = 0; i < RK312x_CODEC_CAPTURE_POWER_UP_LIST_LEN; i++){
  			snd_soc_write(codec,playback_power_up_list[i].reg,playback_power_up_list[i].value);
+ 			usleep_range(1000, 1100);
  		}	
  	printk("%s RK312x_CODEC_PLAYBACK enable\n",__FUNCTION__);
  	}
