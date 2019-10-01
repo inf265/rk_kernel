@@ -1334,7 +1334,7 @@ static int cpufreq_governor_interactive(struct cpufreq_policy *policy,
 			store_target_loads(tunables, "70 600000:70 800000:75 1500000:80 1700000:90", 0);
 			tunables->boostpulse_duration_val = 40 * USEC_PER_MSEC;
 			tunables->touchboostpulse_duration_val = 500 * USEC_PER_MSEC;
-			tunables->touchboost_freq = 1200000;
+			tunables->touchboost_freq = 816000;
 		}
 #endif
 
