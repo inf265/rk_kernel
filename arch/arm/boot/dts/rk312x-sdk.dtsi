@@ -775,19 +775,24 @@
 	};
 
 	battery {
+	
+	/*
 		ocv_table = <3410 3465 3502 3535 3566 3592 3610
 			     3627 3647 3673 3710 3767 3829 3874
 			     3910 3948 3995 4031 4063 4118 4207>;
+			     */
+			     
+		ocv_table = <3500 3524 3552 3574 3589 3601 3612 3624 3640 3664 3698 3726 3755 3790 3830 3873 3917 3963 4015 4086 4183>;	     
 		design_capacity = <4000>;
 		design_qmax = <4100>;
 		bat_res = <100>;
-		max_input_current = <1750>;
+		max_input_current = <1250>;
 		max_chrg_current = <1600>;
 		max_chrg_voltage = <4250>;
 		sleep_enter_current = <1500>;
 		sleep_exit_current = <1500>;
 		sleep_filter_current = <100>;
-		power_off_thresd = <3410>;
+		power_off_thresd = <3470>;
 		zero_algorithm_vol = <3850>;
 		fb_temperature = <115>;
 		energy_mode = <0>;
