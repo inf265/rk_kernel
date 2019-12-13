@@ -1482,7 +1482,7 @@ static void gsl_ts_late_resume(struct early_suspend *h)
 	gsl_ts_resume(&ts->client->dev);
 }
 #endif
-
+ 
 
 static void myfunc(unsigned long data)
 

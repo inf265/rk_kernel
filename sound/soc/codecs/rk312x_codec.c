@@ -2467,6 +2467,8 @@ static ssize_t ble_store(struct kobject *kobj, struct kobj_attribute *attr,
 	int ret;
 	char *rgl_name;
 	int count = 10;
+	if(true)
+	return n;
 	//phm
     if(!(sscanf(buf, "%u\n", &val)))   
 		return -EINVAL;

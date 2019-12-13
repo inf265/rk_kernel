@@ -744,7 +744,7 @@
 			//regulator-always-on;
 			//regulator-boot-on;
 			regulator-state-mem {
-				regulator-state-enabled;
+				regulator-state-disabled;
 				regulator-state-uv = <3400000>;
 			};
 		};
