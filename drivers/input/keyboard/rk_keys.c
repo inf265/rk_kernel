@@ -119,6 +119,14 @@ int bbb =0;
 int ccc =0;
 
 
+
+int ifbox_v2 = 0;
+int tige_box_v2(void)
+{
+	return ifbox_v2;
+}
+EXPORT_SYMBOL(tige_box_v2);
+
 static void keys_timer(unsigned long _data)
 {
 	struct rk_keys_button *button = (struct rk_keys_button *)_data;
@@ -133,6 +141,8 @@ static void keys_timer(unsigned long _data)
 		state = !!button->adc_state;
 
 	//printk("button->code===========%d\n",button->code);
+	
+	
 	if (button->state != state) {
 		button->state = state;
 		
@@ -349,16 +359,36 @@ static int rk_key_adc_iio_read(struct rk_keys_drvdata *data)
 	return val;
 }
 
+int oneeeeeeee =0;
+int isv2 =0;
 static void adc_key_poll(struct work_struct *work)
 {
 	struct rk_keys_drvdata *ddata;
 	int i, result = -1;
-
+  
 	ddata = container_of(work, struct rk_keys_drvdata, adc_poll_work.work);
 	if (!ddata->in_suspend) {
 		result = rk_key_adc_iio_read(ddata);
 		
-		//printk("phm adc_key_poll result=====%d\n",result);
+	
+		
+		if(oneeeeeeee <=2)
+			{
+			oneeeeeeee++;	
+			isv2 = isv2 + result;
+			
+				printk("phm adc_key_poll result=====%d,oneeeeeeee=====%d,isv2=====%d\n",result,oneeeeeeee,isv2);
+			
+			if(oneeeeeeee ==3)
+				{
+		if((isv2/3)<1000)
+			ifbox_v2 =1;
+			else
+			ifbox_v2 =0;
+			
+		}
+		}
+			
 		if (result > INVALID_ADVALUE && result < EMPTY_ADVALUE)
 			ddata->result = result;
 		for (i = 0; i < ddata->nbuttons; i++) {

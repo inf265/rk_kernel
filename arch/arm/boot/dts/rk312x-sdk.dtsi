@@ -193,7 +193,7 @@
 		sdb-gpio = <&gpio3 GPIO_C5 GPIO_ACTIVE_LOW>;
 		status = "okay";
 	};   
-	
+	 
 	nxp@28 {
 		compatible = "nxp,nfc-pn547";
 		reg = <0x28>;
@@ -201,7 +201,18 @@
 		nxp,ven-gpio = <&gpio0 GPIO_A2 GPIO_ACTIVE_LOW>;	
 		nxp,firm-gpio = <&gpio3 GPIO_D7 GPIO_ACTIVE_LOW>;	
 		status = "okay";
+	};
+
+	  
+	mf175x@16 {
+		compatible = "mf175x";
+		reg = <0x16>;
+		irq-gpio= <&gpio0 GPIO_B3 IRQ_TYPE_LEVEL_HIGH>;
+		ven-gpio = <&gpio0 GPIO_A2 GPIO_ACTIVE_HIGH>;	
+		status = "okay";
 	};   
+		
+	
 	
 };
 
@@ -782,11 +793,25 @@
 			     3910 3948 3995 4031 4063 4118 4207>;
 			     */
 			     
+		ntc_table = <43662 41676 39793 38005 36308 34696 33164 31709
+		30326 29011 27760 26570 25438 24361 23335 22358
+		21427 20540 19695 18890 18121 17389 16690 16022
+		14778 14197 13642 13113 12606 12122 11659 11216
+		10793 10388 10000 9629 9273 8933 8607 8295>;
+		ntc_degree_from = <1 10>;
+		
+		
+//26.66K ---->>>12625---1
+//18.2K------>>>8787----10
+//5.23K------>>>2687----43
+
+///lbc -------------2425---------7612----11237
+
 		ocv_table = <3500 3524 3552 3574 3589 3601 3612 3624 3640 3664 3698 3726 3755 3790 3830 3873 3917 3963 4015 4086 4183>;	     
 		design_capacity = <4000>;
 		design_qmax = <4100>;
 		bat_res = <100>;
-		max_input_current = <1250>;
+		max_input_current = <1500>;
 		max_chrg_current = <1600>;
 		max_chrg_voltage = <4250>;
 		sleep_enter_current = <1500>;
@@ -799,7 +824,7 @@
 		max_soc_offset = <60>;
 		monitor_sec = <5>;
 		virtual_power = <0>;
-		power_dc2otg = <1>;
+		power_dc2otg = <0>;
 		dc_det_adc = <1>;
 	};
 };

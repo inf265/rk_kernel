@@ -45,7 +45,7 @@
 
 #define MAX_BUFFER_SIZE	512
 
-#define PN547_DEBUG
+//#define PN547_DEBUG
 
 struct pn547_dev	{
 	wait_queue_head_t	read_wq;
@@ -262,13 +262,13 @@ static ssize_t pn547_dev_read(struct file *filp, char __user *buf,
 		printk("%s : failed to copy to user space\n", __func__);
 		return -EFAULT;
 	}
-
-	//printk("IFD->PC:");
+/*
+	printk("IFD->PC:");
 	for(i = 0; i < ret; i++){
-		//printk(" %02X", tmp[i]);
+		printk(" %02X", tmp[i]);
 	}
-	//printk("\n");
-
+	printk("\n");
+*/
 	return ret;
 
 fail:
@@ -296,21 +296,33 @@ static ssize_t pn547_dev_write(struct file *filp, const char __user *buf,
 
 	//printk("%s : writing %zu bytes.\n", __func__, count);
 
-	//printk("PC->IFD:");
+	/*printk("PC->IFD:");
 	for(i = 0; i < count; i++){
-		//printk(" %02X", tmp[i]);
+		printk(" %02X", tmp[i]);
 	}
-	//printk("\n");
+	printk("\n");
+	*/
 	/* Write data */
 	ret = i2c_master_send(pn547_dev->client, tmp, count);
 	if (ret != count) {
-		//printk("%s : i2c_master_send returned %d\n", __func__, ret);
+		printk("%s : i2c_master_send returned %d\n", __func__, ret);
 		ret = -EIO;
 	}
 
 	return ret;
 }
 
+
+static int test_pn547_i2c(struct pn547_dev *pn547_dev)
+{
+   int ret;
+   char tmp[] ={'20','00','01','00'};
+	ret = i2c_master_send(pn547_dev->client, tmp, 4);
+
+	printk("test_pn547_i2c  ret=====%d\n",ret);
+
+
+}
 static int pn547_dev_open(struct inode *inode, struct file *filp)
 {
 	struct pn547_dev *pn547_dev = container_of(filp->private_data,
@@ -343,14 +355,14 @@ static long pn547_dev_ioctl(struct file *filp, unsigned int cmd, unsigned long a
 			msleep(10);
 		} else if (arg == 1) {
 			/* power on */
-			//printk("%s power on\n", __func__);
+			printk("%s power on\n", __func__);
 			gpio_set_value(pn547_dev->firm_gpio, 0);
 			gpio_set_value(pn547_dev->ven_gpio, 1);
 			irq_set_irq_wake(pn547_dev->client->irq, 1);
 			msleep(10);
 		} else  if (arg == 0) {
 			/* power off */
-			//printk("%s power off\n", __func__);
+			printk("%s power off\n", __func__);
 			gpio_set_value(pn547_dev->firm_gpio, 0);
 			gpio_set_value(pn547_dev->ven_gpio, 0);
 			irq_set_irq_wake(pn547_dev->client->irq, 0);
@@ -377,6 +389,9 @@ static const struct file_operations pn547_dev_fops = {
 	.unlocked_ioctl  = pn547_dev_ioctl,
 };
 
+
+extern int tige_box_v2(void);
+
 static int pn547_probe(struct i2c_client *client,
 		const struct i2c_device_id *id)
 {	
@@ -385,7 +400,7 @@ static int pn547_probe(struct i2c_client *client,
 	//struct pn547_i2c_platform_data *platform_data_from_board;
 	struct pn547_dev *pn547_dev;
 
-        printk("pn547 enter probe\n");
+        printk("pn547 enter probe,tige_box_v2==%d\n",tige_box_v2());
 	//iomux_set(GPIO3_A3);   //FIRM
 	//iomux_set(GPIO3_A6);   //VEN
 	//iomux_set(GPIO3_A7);   //IRQ
@@ -395,6 +410,9 @@ static int pn547_probe(struct i2c_client *client,
 	//	printk("%s : nfc probe fail\n", __func__);
 	//	return  -ENODEV;
 	//}
+   
+	if(tige_box_v2())
+		return -ENODEV;
 
 	
 	printk("nfc probe step01 is ok\n");
@@ -492,10 +510,19 @@ static int pn547_probe(struct i2c_client *client,
 	  printk("PN547: gpio_firm_request error\n");
 	  goto err_firm;
 	}
- 
+
+    printk("pn547_dev->ven_gpio====%d\n",gpio_get_value(pn547_dev->ven_gpio));
+
+	
 	gpio_direction_output(pn547_dev->firm_gpio, 0);
 	gpio_direction_output(pn547_dev->ven_gpio, 1);
          printk("nfc probe GPIO is ok\n");
+
+
+
+
+
+
 	
 	gpio_direction_input(pn547_dev->irq_gpio);
 	printk("pn547 client->irq = %d", client->irq); //kingsun, zhudm
@@ -521,6 +548,11 @@ static int pn547_probe(struct i2c_client *client,
 
 	printk("nfc probe successful\n");
 
+/*
+ret = test_pn547_i2c(pn547_dev);
+if(ret=-11)
+	goto err_request_irq_failed;
+*/
 
 #if defined(PN547_DEBUG)
 		ret = device_create_file(&client->dev, &pn547_dev_attr);
@@ -599,7 +631,7 @@ static int __init pn547_dev_init(void)
 	pr_info("Loading pn547 driver\n");
 	return i2c_add_driver(&pn547_driver);
 }
-module_init(pn547_dev_init);
+late_initcall(pn547_dev_init);
 
 static void __exit pn547_dev_exit(void)
 {

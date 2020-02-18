@@ -17,4 +17,13 @@ config NFC_PN548
 	help
 	    say Y here if you have a NFC_PN548 interface .  
 	    
+	    
+
+config NFC_MF175X
+	tristate "NFC_MF175X"
+	default n	
+	help
+	    say Y here if you have a NFC_MF175X interface .  
+
+
 endif

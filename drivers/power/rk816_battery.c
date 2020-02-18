@@ -1335,6 +1335,8 @@ static void rk816_bat_set_current(struct rk816_battery *di, int charge_current)
 	usb_ctrl &= ~INPUT_CUR_MSK;
 	usb_ctrl |= (charge_current);
 	rk816_bat_write(di, RK816_USB_CTRL_REG, usb_ctrl);
+
+	printk("charge_current=====%d,RK816_USB_CTRL_REG===0x%x\n",charge_current,rk816_bat_read(di, RK816_USB_CTRL_REG));
 }
 
 static void rk816_bat_set_chrg_param(struct rk816_battery *di,
@@ -1934,7 +1936,7 @@ static void rk816_bat_select_chrg_cv(struct rk816_battery *di)
 		di->chrg_cur_sel = (index << CHRG_CRU_SEL_SHIFT);
 	}
 
-	DBG("<%s>. vol = 0x%x, input = 0x%x, sel = 0x%x\n",
+	printk("<%s>. vol = 0x%x, input = 0x%x, sel = 0x%x\n",
 	    __func__, di->chrg_vol_sel, di->chrg_cur_input, di->chrg_cur_sel);
 }
 
@@ -1975,7 +1977,9 @@ static void rk816_bat_init_chrg_config(struct rk816_battery *di)
 	usb_ctrl &= ~INPUT_CUR_MSK;
 	usb_ctrl |= di->chrg_cur_input;
 	chrg_ctrl1 = (CHRG_EN) | (di->chrg_vol_sel | di->chrg_cur_sel);
-
+	
+	printk("vvvvvvvvvv  ===0x%x,di->chrg_vol_sel===%d,di->chrg_cur_sel==%d\n",chrg_ctrl1,di->chrg_vol_sel,di->chrg_cur_sel);
+ 
 	/* set charge finish current */
 	chrg_ctrl3 |= CHRG_TERM_DIG_SIGNAL;
 	chrg_ctrl2 &= ~FINISH_CUR_MSK;
@@ -3391,22 +3395,84 @@ static int rk816_bat_get_ntc_res(struct rk816_battery *di)
 	res = ((di->voltage_k * val) / 1000 + di->voltage_b) * 1000 / 2200;
 	res = res * 1000 / 80;
 
-	DBG("<%s>. val = %d, ntc_res=%d\n", __func__, val, res);
+	printk("<%s>. val = %d, ntc_res=%d\n", __func__, val, res);
 
 	return res;
 }
+u8 usbcu,newcu=0;
+
+extern int tige_box_v2(void);
 
 static void rk816_bat_update_temperature(struct rk816_battery *di)
 {
 	u32 ntc_size, *ntc_table;
 	int i, res;
+	u8 chrg_ctrl1;
+	u8 usb_ctrl;
 
 	ntc_table = di->pdata->ntc_table;
 	ntc_size = di->pdata->ntc_size;
 	di->temperature = VIRTUAL_TEMPERATURE;
 
 	if (ntc_size) {
+		newcu = rk816_bat_read(di, RK816_CHRG_CTRL_REG1);
+		usbcu = rk816_bat_read(di, RK816_USB_CTRL_REG);
 		res = rk816_bat_get_ntc_res(di);
+		
+			
+				if((res<=2425)|(res>=11237))
+				{
+					//input off
+					if(res>=25000)//test-------phm add no bat
+						{
+						if(di->dc_in)
+						usb_ctrl = 0x45;
+							else
+						usb_ctrl = 0x40;
+
+					}
+					else
+						usb_ctrl = 0x41;
+
+					
+					chrg_ctrl1 = 0xc3;
+					if(tige_box_v2())
+					printk("chrg err---------Abnormal temperature\n");
+					}
+					else if(res>7612&&res<11237)
+						{
+							chrg_ctrl1 = 0xc3;//0xc0;//1.0A
+							if(di->dc_in)
+							usb_ctrl = 0x45;
+								else
+							usb_ctrl = 0x40;
+							}
+						else
+							{
+							chrg_ctrl1 = 0xc3;//1.6A
+							if(di->dc_in)
+							usb_ctrl = 0x45;
+								else
+							usb_ctrl = 0x40;
+						}
+							
+							//if(chrg_ctrl1!=newcu)
+							//	{
+							//	printk("phm add  update temp RK816_CHRG_CTRL_REG1 %x\n",chrg_ctrl1);
+						//	rk816_bat_write(di, RK816_CHRG_CTRL_REG1, chrg_ctrl1);
+							
+							//rk816_bat_set_current(di, di->chrg_cur_input);	
+					//	}
+							if(usb_ctrl!=usbcu)
+								{
+								rk816_bat_write(di, RK816_USB_CTRL_REG, usb_ctrl);
+								printk("222222222222222222\n");
+								}
+							
+					//printk("phm add  update temp di->chrg_cur_input %x\n",di->chrg_cur_input);
+		
+		
+		//phm add
 		if (res < ntc_table[ntc_size - 1]) {
 			BAT_INFO("bat ntc upper max degree: R=%d\n", res);
 		} else if (res > ntc_table[0]) {
@@ -3425,7 +3491,7 @@ static void rk816_battery_work(struct work_struct *work)
 {
 	struct rk816_battery *di =
 		container_of(work, struct rk816_battery, bat_delay_work.work);
-
+//phm add
 	rk816_bat_update_info(di);
 	rk816_bat_wait_finish_sig(di);
 	rk816_bat_rsoc_daemon(di);
@@ -3461,8 +3527,11 @@ static void rk816_bat_bc_delay_work(struct work_struct *work)
 			struct rk816_battery, bc_delay_work.work);
 	const char *event_name[] = {"DISCNT", "USB", "AC", "AC",
 				    "UNKNOWN", "OTG ON", "OTG OFF"};
-
+ //phm add
 	BAT_INFO("receive bc notifier event: %s..\n", event_name[di->bc_event]);
+
+
+ 
 	switch (di->bc_event) {
 	case USB_BC_TYPE_DISCNT:
 		rk816_bat_set_chrg_param(di, USB_TYPE_NONE_CHARGER);
@@ -3830,9 +3899,9 @@ static void rk816_bat_init_ts_detect(struct rk816_battery *di)
 	rk816_bat_write(di, RK816_GPIO_IO_POL_REG, buf);
 
 	/* External temperature monitoring */
-	buf = rk816_bat_read(di, RK816_TS_CTRL_REG);
-	buf &= ~BIT(4);
-	rk816_bat_write(di, RK816_TS_CTRL_REG, buf);
+	//buf = rk816_bat_read(di, RK816_TS_CTRL_REG);
+	//buf &= ~BIT(4);
+	rk816_bat_write(di, RK816_TS_CTRL_REG, 0x81);
 
 	/* ADC_TS_EN */
 	buf = rk816_bat_read(di, RK816_ADC_CTRL_REG);
