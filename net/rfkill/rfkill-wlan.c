@@ -45,7 +45,7 @@
 #include <linux/of_device.h>
 #include <linux/of_gpio.h>
 #endif
-
+#include <linux/crc32.h>
 #if 0
 #define DBG(x...)   printk(KERN_INFO "[WLAN_RFKILL]: "x)
 #else
@@ -596,16 +596,49 @@ static int rockchip_wifi_rand_mac_addr(unsigned char *buf)
 int rockchip_wifi_mac_addr(unsigned char *buf)
 {
     char mac_buf[20] = {0};
+    char Top_four_buf[8] = {0};
+    u32		fcs1;
+    u32		fcs2;
+    u8 data8_1,data8_2,data8_3,data8_4,data8_5,data8_6;
     LOG("%s: enter.\n", __func__);
 
     // from vflash
     if(is_zero_ether_addr(wifi_custom_mac_addr)) {
         int i;
         char *tempBuf = kmalloc(512, GFP_KERNEL);
-        if(tempBuf) {
+        if(tempBuf) { 
             GetSNSectorInfo(tempBuf);
             for (i = 445; i <= 450; i++)
                 wifi_custom_mac_addr[i-445] = tempBuf[i];
+                //phm add
+                if((wifi_custom_mac_addr[0]==0) && (wifi_custom_mac_addr[1]==0) && (wifi_custom_mac_addr[2]==0))
+                	{
+                		
+                fcs1 = crc32_le(~0, tempBuf, 512);
+                printk("fcs1====%02x\n",fcs1);
+                
+                
+            for (i = 2; i <= 9; i++)
+            
+            {
+               
+                Top_four_buf[i-2] = tempBuf[i];
+
+              }
+                fcs2 = crc32_le(~0, Top_four_buf, 8);
+                printk("fcs2====%02x\n",fcs2);
+					wifi_custom_mac_addr[0] = (u8)(fcs1 >> 24);
+					//wifi_custom_mac_addr[0] &=~(1<<0);
+					//wifi_custom_mac_addr[1] = (u8)(fcs1 >> 16);
+					//wifi_custom_mac_addr[2] = (u8)(fcs1 >> 8);
+					wifi_custom_mac_addr[0] =0x00;
+					wifi_custom_mac_addr[1] =0xe0;
+					wifi_custom_mac_addr[2] =0x4c;
+					wifi_custom_mac_addr[3] = (u8)fcs1;
+					wifi_custom_mac_addr[4] = (u8)(fcs2 >> 24);
+					wifi_custom_mac_addr[5] = (u8)(fcs2 >> 16);
+                		}
+                
             kfree(tempBuf);
         } else {
             return -1;

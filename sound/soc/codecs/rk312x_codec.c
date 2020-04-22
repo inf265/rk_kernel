@@ -2336,6 +2336,8 @@ static int rk312x_suspend(struct snd_soc_codec *codec)
 {
 	unsigned int val=0;
 	DBG("%s\n", __func__);
+	
+		
 	if(isline==1)
 		printk("%s,is in linein\n", __func__);
 		else
@@ -2580,7 +2582,7 @@ static int rk312x_resume(struct snd_soc_codec *codec)
 	if(rk312x_priv->codec_hp_det)
 	{
 		/* enable hp det interrupt */
-		snd_soc_write(codec, RK312x_DAC_CTL, 0x08);
+		//snd_soc_write(codec, RK312x_DAC_CTL, 0x08);
 		printk("0xa0 -- 0x%x\n",snd_soc_read(codec, RK312x_DAC_CTL));
 		val = readl_relaxed(RK_GRF_VIRT + GRF_ACODEC_CON);
 		writel_relaxed(0x1f001f, RK_GRF_VIRT + GRF_ACODEC_CON);

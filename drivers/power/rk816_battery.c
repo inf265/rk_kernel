@@ -3395,7 +3395,7 @@ static int rk816_bat_get_ntc_res(struct rk816_battery *di)
 	res = ((di->voltage_k * val) / 1000 + di->voltage_b) * 1000 / 2200;
 	res = res * 1000 / 80;
 
-	printk("<%s>. val = %d, ntc_res=%d\n", __func__, val, res);
+	//printk("<%s>. val = %d, ntc_res=%d\n", __func__, val, res);
 
 	return res;
 }
@@ -3422,61 +3422,56 @@ static void rk816_bat_update_temperature(struct rk816_battery *di)
 			
 				if((res<=2425)|(res>=11237))
 				{
-					//input off
-					if(res>=25000)//test-------phm add no bat
-						{
-						if(di->dc_in)
-						usb_ctrl = 0x45;
-							else
-						usb_ctrl = 0x40;
-
-					}
-					else
 						usb_ctrl = 0x41;
-
+					printk("chrg err---------Abnormal temperature  res==%d\n\n",res);
+                          if(res>23000)
+                          	{
+						  if(di->ac_in)
+							usb_ctrl = 0x44;
+								else
+							usb_ctrl = 0x40;
+						  }
 					
-					chrg_ctrl1 = 0xc3;
-					if(tige_box_v2())
-					printk("chrg err---------Abnormal temperature\n");
 					}
 					else if(res>7612&&res<11237)
 						{
-							chrg_ctrl1 = 0xc3;//0xc0;//1.0A
-							if(di->dc_in)
-							usb_ctrl = 0x45;
+							if(di->ac_in)
+							usb_ctrl = 0x44;
 								else
 							usb_ctrl = 0x40;
 							}
 						else
 							{
-							chrg_ctrl1 = 0xc3;//1.6A
-							if(di->dc_in)
-							usb_ctrl = 0x45;
+							if(di->ac_in)
+							usb_ctrl = 0x44;
 								else
 							usb_ctrl = 0x40;
 						}
 							
 							//if(chrg_ctrl1!=newcu)
 							//	{
-							//	printk("phm add  update temp RK816_CHRG_CTRL_REG1 %x\n",chrg_ctrl1);
+					//printk("phm add  update temp usb_ctrl 0x%x ,di->ac_in===%d\n",usb_ctrl,di->ac_in);
 						//	rk816_bat_write(di, RK816_CHRG_CTRL_REG1, chrg_ctrl1);
 							
 							//rk816_bat_set_current(di, di->chrg_cur_input);	
 					//	}
 							if(usb_ctrl!=usbcu)
 								{
+								if(tige_box_v2())
+									{
 								rk816_bat_write(di, RK816_USB_CTRL_REG, usb_ctrl);
-								printk("222222222222222222\n");
+								//printk("222222222222222222\n");
+									}
 								}
 							
-					//printk("phm add  update temp di->chrg_cur_input %x\n",di->chrg_cur_input);
+				//printk("phm add  update temp di->chrg_cur_input %x\n",di->chrg_cur_input);
 		
 		
 		//phm add
 		if (res < ntc_table[ntc_size - 1]) {
-			BAT_INFO("bat ntc upper max degree: R=%d\n", res);
+		//	BAT_INFO("bat ntc upper max degree: R=%d\n", res);
 		} else if (res > ntc_table[0]) {
-			BAT_INFO("bat ntc lower min degree: R=%d\n", res);
+			//BAT_INFO("bat ntc lower min degree: R=%d\n", res);
 		} else {
 			for (i = 0; i < ntc_size; i++) {
 				if (res >= ntc_table[i])
