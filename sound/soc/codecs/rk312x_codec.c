@@ -429,8 +429,8 @@ static int rk312x_codec_ctl_gpio(int gpio, int level)
 	if ((gpio & CODEC_SET_SPK) && rk312x_priv
 	    && rk312x_priv->spk_ctl_gpio != INVALID_GPIO&&rk312x_priv->if_hp == 0 &&(level != gpio_get_value(rk312x_priv->spk_ctl_gpio))) {
 
-		gpio_direction_output(30,level);
-		gpio_direction_output(35,0);
+//		gpio_direction_output(30,level);
+	//	gpio_direction_output(35,0);
 		if(level==0)
 		msleep(100);
 		gpio_set_value(rk312x_priv->spk_ctl_gpio, level);
@@ -2605,8 +2605,8 @@ static irqreturn_t codec_hp_det_isr(int irq, void *data)
 	//phm add
 		DBG("%s hp det rising\n", __func__);
 		//rk312x_codec_ctl_gpio(CODEC_SET_SPK, rk312x_priv->spk_active_level);
-				gpio_direction_output(30,1);
-		gpio_direction_output(35,0);
+				//gpio_direction_output(30,1);
+	//	gpio_direction_output(35,0);
 		printk("abc===%d\n",abc);
 		if(abc==0)
 		gpio_set_value(rk312x_priv->spk_ctl_gpio, 1);
@@ -2615,8 +2615,8 @@ static irqreturn_t codec_hp_det_isr(int irq, void *data)
 		
 	} else if (val&0x2) {
 		DBG("%s hp det falling\n", __func__);
-						gpio_direction_output(30,0);
-		gpio_direction_output(35,0);
+				//		gpio_direction_output(30,0);
+		//gpio_direction_output(35,0);
 	gpio_set_value(rk312x_priv->spk_ctl_gpio,0);
 	rk312x_priv->if_hp = 1;
 	
@@ -3019,8 +3019,8 @@ void rk312x_platform_shutdown(struct platform_device *pdev)
 	}
 //phm add
 
-		gpio_direction_output(30,0);
-		gpio_direction_output(35,0);
+	//	gpio_direction_output(30,0);
+	//	gpio_direction_output(35,0);
 	if (rk312x_priv->spk_ctl_gpio != INVALID_GPIO)
 		gpio_set_value(rk312x_priv->spk_ctl_gpio, !rk312x_priv->spk_active_level);
 

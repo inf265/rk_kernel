@@ -183,7 +183,7 @@
 		init-gpios = <&gpio0 GPIO_B5 1/*13 auxin_en*/
 		&gpio3 GPIO_C5 1/*117 music led*/
 		&gpio3 GPIO_D2 0/*122 laohu*/
-		/*&gpio1 GPIO_A7 1spk*/
+		&gpio1 GPIO_A7 1
 		&gpio1 GPIO_B1 0
 		&gpio1 GPIO_B0 0
 		&gpio1 GPIO_B3 0
@@ -191,7 +191,7 @@
 		//&gpio2 GPIO_D1 1/*89 LED*/
 	//	&gpio0 GPIO_D3 1/*27 LED*/
 		//&gpio0 GPIO_D4 1/*28 LED*/
-		&gpio0 GPIO_D6 0/*30 CTL_1 CODEC*/
+		//&gpio0 GPIO_D6 0/*30 CTL_1 CODEC*/
 		&gpio1 GPIO_A3 0/* 35 CTL_2 CODEC*/
 		&gpio3 GPIO_C4 1 /* 116 hp con*/
 		&gpio0 GPIO_B6 GPIO_ACTIVE_HIGH>;
@@ -199,7 +199,7 @@
 
 
 &codec {
-	spk_ctl_io = <&gpio1 GPIO_A7 GPIO_ACTIVE_HIGH>;
+	spk_ctl_io = <&gpio0 GPIO_D6 GPIO_ACTIVE_HIGH>;
 	hp_ctl_io  = <&gpio3 GPIO_C4 GPIO_ACTIVE_HIGH>;
         spk-mute-delay = <50>;
         hp-mute-delay = <10>;
