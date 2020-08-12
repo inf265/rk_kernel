@@ -183,7 +183,7 @@
 		init-gpios = <&gpio0 GPIO_B5 1/*13 auxin_en*/
 		&gpio3 GPIO_C5 1/*117 music led*/
 		&gpio3 GPIO_D2 0/*122 laohu*/
-		&gpio1 GPIO_A7 1
+		&gpio1 GPIO_A7 0
 		&gpio1 GPIO_B1 0
 		&gpio1 GPIO_B0 0
 		&gpio1 GPIO_B3 0

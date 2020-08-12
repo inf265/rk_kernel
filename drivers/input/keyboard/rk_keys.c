@@ -114,6 +114,21 @@ void rk_send_wakeup_key(void)
 }
 EXPORT_SYMBOL(rk_send_wakeup_key);
 
+
+void rk_send_kp8_key(void)
+{
+	if (!sinput_dev)
+		return;
+
+	input_report_key(sinput_dev, KEY_KP3, 1);
+	input_sync(sinput_dev);
+	input_report_key(sinput_dev, KEY_KP3, 0);
+	input_sync(sinput_dev);
+}
+EXPORT_SYMBOL(rk_send_kp8_key);
+
+
+
 int aaa =0;
 int bbb =0;
 int ccc =0;
@@ -569,6 +584,7 @@ static int keys_probe(struct platform_device *pdev)
 	input_set_capability(input, EV_KEY, KEY_KP8);
 	input_set_capability(input, EV_KEY, KEY_KP1);
 	input_set_capability(input, EV_KEY, KEY_KP2);
+	input_set_capability(input, EV_KEY, KEY_KP3);
 	input_set_capability(input, EV_KEY, KEY_HOME);	
 
 	wake_lock_init(&ddata->wake_lock, WAKE_LOCK_SUSPEND, input->name);

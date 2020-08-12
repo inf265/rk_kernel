@@ -68,7 +68,7 @@ module_param(debug, int, S_IRUGO|S_IWUSR);
  *  31: 6dB
  *  Step: 1.5dB
 */
-#define  OUT_VOLUME    26
+#define  OUT_VOLUME    24
 
 /* capture vol set
  * 0: -18db
@@ -1997,6 +1997,9 @@ static struct rk312x_reg_val_typ capture_power_down_list[] = {
  			snd_soc_write(codec,playback_power_up_list[i].reg,playback_power_up_list[i].value);
  			usleep_range(1000, 1100);
  		}	
+ 		
+ 			snd_soc_write(rk312x_priv->codec, 0xb4, rk312x_priv->spk_volume);
+			snd_soc_write(rk312x_priv->codec, 0xb8, rk312x_priv->spk_volume);
  	printk("%s RK312x_CODEC_PLAYBACK enable\n",__FUNCTION__);
  	}
 
@@ -2902,7 +2905,7 @@ regulator_ble = regulator_get(NULL,"rk816_ldo4");
 			/* goto err_; */
 			rk312x->spk_ctl_gpio = INVALID_GPIO;
 		}
-		gpio_direction_output(rk312x->spk_ctl_gpio, !rk312x->spk_active_level);
+		gpio_direction_output(rk312x->spk_ctl_gpio, rk312x->spk_active_level);
 	}
 	DBG(KERN_INFO"%s : spk_ctl_gpio %d active_level %d \n", __func__,
 		rk312x->spk_ctl_gpio, rk312x->spk_active_level);

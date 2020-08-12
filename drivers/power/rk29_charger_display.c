@@ -13,7 +13,7 @@
 #include <asm/uaccess.h>
 #include <linux/power_supply.h>
 #include <linux/rockchip/common.h>
-
+#include <linux/gpio.h>
 #if 0
 #define DBG(x...)	printk(KERN_INFO x)
 #else
@@ -131,7 +131,9 @@ static int  __init start_charge_logo_display(void)
 #endif
 
 	if(val_status.intval == POWER_SUPPLY_STATUS_CHARGING){
-		if (((rockchip_boot_mode() == BOOT_MODE_NORMAL) ||(rockchip_boot_mode() == BOOT_MODE_CHARGE))) {			
+		if (((rockchip_boot_mode() == BOOT_MODE_NORMAL) ||(rockchip_boot_mode() == BOOT_MODE_CHARGE))) {		
+					gpio_direction_output(30,0);
+			  	gpio_direction_output(39,0);	
 			add_bootmode_charger_to_cmdline(1);
 			DBG("power in charge mode %d %d  %d\n\n",rockchip_boot_mode(),val_capacity.intval,pwr_on_thrsd);
 			return 0;
