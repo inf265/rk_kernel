@@ -50,7 +50,7 @@
 #endif
 
 #define DEBOUNCE_JIFFIES	(10 / (MSEC_PER_SEC / HZ))	/* 10ms */
-#define ADC_SAMPLE_JIFFIES	(100 / (MSEC_PER_SEC / HZ))	/* 100ms */
+#define ADC_SAMPLE_JIFFIES	(80 / (MSEC_PER_SEC / HZ))	/* 100ms */
 #define WAKE_LOCK_JIFFIES	(1 * HZ)			/* 1s */
 
 enum rk_key_type {
@@ -135,8 +135,8 @@ int ccc =0;
 
 
 
-int ifbox_v2 = 0;
-int tige_box_v2(void)
+bool ifbox_v2 = true;
+bool tige_box_v2(void)
 {
 	return ifbox_v2;
 }
@@ -396,10 +396,13 @@ static void adc_key_poll(struct work_struct *work)
 			
 			if(oneeeeeeee ==3)
 				{
-		if((isv2/3)<1000)
-			ifbox_v2 =1;
+					
+					
+		printk("isv2====%d\n",isv2/3);
+		if((isv2/3)<=1000)
+			ifbox_v2 =true;
 			else
-			ifbox_v2 =0;
+			ifbox_v2 =false;
 			
 		}
 		}

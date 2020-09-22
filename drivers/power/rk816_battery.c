@@ -3447,8 +3447,8 @@ static int rk816_bat_get_ntc_res(struct rk816_battery *di)
 	return res;
 }
 u8 usbcu,newcu=0;
-
-extern int tige_box_v2(void);
+int ifchrgerr = 0;
+extern bool tige_box_v2(void);
 
 static void rk816_bat_update_temperature(struct rk816_battery *di)
 {
@@ -3469,10 +3469,14 @@ static void rk816_bat_update_temperature(struct rk816_battery *di)
 			
 				if((res<=2425)|(res>=11237))
 				{
+					
+					ifchrgerr = 1;
 						usb_ctrl = 0x41;
 					printk("chrg err---------Abnormal temperature  res==%d\n\n",res);
                           if(res>23000)
                           	{
+                          		
+                ifchrgerr =0;
 						  if(di->ac_in)
 							usb_ctrl = 0x44;
 								else
@@ -3482,6 +3486,7 @@ static void rk816_bat_update_temperature(struct rk816_battery *di)
 					}
 					else if(res>7612&&res<11237)
 						{
+							ifchrgerr =0;
 							if(di->ac_in)
 							usb_ctrl = 0x44;
 								else
@@ -3489,6 +3494,7 @@ static void rk816_bat_update_temperature(struct rk816_battery *di)
 							}
 						else
 							{
+								ifchrgerr =0;
 							if(di->ac_in)
 							usb_ctrl = 0x44;
 								else
@@ -3559,8 +3565,44 @@ extern void rk_send_kp8_key(void);
 #define MID(a,b,c)      (MAX(a,b)>c?MAX(MIN(a,b),c):MIN(MAX(a,b),c))
 
 
+static int Average_current(struct rk816_battery *di)
+{
+
+int i =0,i2=0;
+int reg[5],reg2[5];
+int curr;
 
 
+for(i=0;i<3;i++)
+{
+for(i2=0;i2<3;i2++)
+{
+	mdelay(100);
+	reg[i2] = rk816_bat_get_avg_current(di);
+	printk("Average_current=========%d\n",reg[i]);
+	}
+	reg2[i] = MID(reg[0],reg[1],reg[2]);
+}
+
+
+	curr = MID(reg2[0],reg2[1],reg2[2]);
+
+	return curr;
+
+
+}
+
+
+static bool is_current(struct rk816_battery *di)
+{
+
+	return(ifchrgerr!=1 && rk816_bat_chrg_online(di));
+		
+
+}
+
+
+	
 
 static void rk816_battery_cur_work(struct work_struct *work)
 {
@@ -3569,86 +3611,87 @@ static void rk816_battery_cur_work(struct work_struct *work)
 		int reg2 = -2000;
 	int test_cur=0;
 	int test_cur2=0;
+	int test_cur3=0;
+	int test_cur4=0;
+	int test_cur5=0;
+
+	bool ischr;
+	bool ischr2;
+	
 	int err_c = 0;
 	int i0=0,i=0,i1=0,i2=0,i3=0,i4=0;
 	int reg[5],reg3[5];
 	int spk_en_ctl;
-		
-		
-		
+
+	 if(tige_box_v2())
+	 	{
+	 		printk("v4-----------not test_cur\n");
+	 	gpio_direction_output(39,1);
+	}
+	else
+		{
+	 
 		if(one_test==0)
 			{
 				one_test = 1;
 				
-		//	printk("test_cur0==1111111=%d,gpio_get_value==%d\n",rk816_bat_get_avg_current(di),gpio_get_value(39));
-		  //spk_en_ctl = gpio_get_value(30);
-			
+         agan:
 			gpio_direction_output(39,0);
+			mdelay(300);
 
-			for(i4=0;i4<3;i4++)
-			{
-			for(i0=0;i0<3;i0++)
-			{
-				mdelay(100);
-				reg[i0] = rk816_bat_get_avg_current2(di);
-				printk("test_cur=====0000=========%d\n",reg[i0]);
-				}
-				reg3[i4] = MID(reg[0],reg[1],reg[2]);
-			}
-
-				test_cur = MID(reg3[0],reg3[1],reg3[2]);
-				//mdelay(2000);
+			ischr = is_current(di);
+			test_cur = Average_current(di);
+			
 			gpio_direction_output(39,1);
-			//gpio_direction_output(30,spk_en_ctl);
-			for(i2=0;i2<3;i2++)
-			{
-			for(i=0;i<3;i++)
-			{
-				mdelay(500);
-				reg[i] = rk816_bat_get_avg_current(di);
-				printk("test_cur2======11111111111========%d\n",reg[i]);
-				}
-				reg3[i2] = MID(reg[0],reg[1],reg[2]);
-			}
+			
+			mdelay(2000);
 
-				test_cur2 = MID(reg3[0],reg3[1],reg3[2]);
-		printk("test_cur===%d,test_cur2===%d\n",test_cur,test_cur2);
-		
-			if((test_cur-test_cur2)>=250)
+			ischr2 = is_current(di);
+			test_cur2 = Average_current(di);
+			
+			printk("test_cur===%d,test_cur2===%d\n",test_cur,test_cur2);
+
+			if(ischr!=ischr2)
+				goto agan;
+				
+		   printk("next\n");
+			if((test_cur-test_cur2)>=300)
 				{
-					printk("rk816_battery_cur_work  test_cur2-test_cur>300   Excessive current, turn off the amplifier!!!!!!!!!!!!! \n");
-					
-			for(i3=0;i3<3;i3++)
-			{
-				
-					for(i1=0;i1<3;i1++)
-					{
-				mdelay(100);
-				reg[i1] = rk816_bat_get_avg_current(di);
-				
-				printk("test_cur2=======222222222=======%d\n",reg[i1]);
-					}
-					reg3[i3] = MID(reg[0],reg[1],reg[2]);
-				}
-						test_cur2 = MID(reg3[0],reg3[1],reg3[2]);
-						
-							printk("test_cur=22222==%d,test_cur2===%d\n",test_cur,test_cur2);
+				    mdelay(20);
+					test_cur3 = Average_current(di);
+					printk("test_cur=22222==%d,test_cur2===%d\n",test_cur,test_cur2);
 
-				if((test_cur-test_cur2)>=250)
+				if((test_cur-test_cur3)>=320)
 						{
-					pa_errr = 1;
 			gpio_direction_output(30,0);			
 			gpio_direction_output(39,0);
+			
+			printk("rk816_battery_cur_work  test_cur2-test_cur>300   Excessive current, turn off the amplifier!!!!!!!!!!!!! ===%d \n",rk816_bat_get_avg_current(di));
+			   mdelay(3000);
+			   test_cur4 = Average_current(di);
+			   
+			   if((test_cur4-test_cur3)>=200)
+			   	{
+
+				printk(" test_cur4====%d , test_cur3===%d\n",test_cur4,test_cur3);
+						pa_errr = 1;
+			   	}
+			   else
+			   	{
+			   	gpio_direction_output(39,1);
+ 					printk(" Misjudgment !! PA ok test_cur4====%d , test_cur3===%d\n",test_cur4,test_cur3);
+
+			   }
+
+			
+			    
 				}
-					else
-						{
-					gpio_direction_output(39,1);
-				}
+
 				}
 		  
 	}
 		
-		if(rk816_bat_chrg_online(di))
+		if(is_current(di))
 			{
 				reg2 = -750;
 		}
@@ -3667,20 +3710,25 @@ static void rk816_battery_cur_work(struct work_struct *work)
      currrrrrrrrrrrrrr = rk816_bat_get_avg_current(di);
     //printk("currrrrrrrrrrrrrr===%d\n",currrrrrrrrrrrrrr);
 			   if(currrrrrrrrrrrrrr<=reg2)
+			   	{
+			   	 mdelay(30);
 			   		nnn++;
+			   	}
 			  else
 			  	nnn=0;
-			  if(nnn>=3)
+			  if(nnn>=5)
 			  	{
 			  	gpio_direction_output(30,0);
 			  	gpio_direction_output(39,0);
 			  	pa_errr = 1;
 			  	//rk_send_kp8_key();
-			  	printk("rk816_battery_cur_work  ac_in   Excessive current, turn off the amplifier!!!!!!!!!!!!! \n");
+			  	printk("rk816_battery_cur_work  ac_in   Excessive current, turn off the amplifier!!!!!!!!!!!!! ======%d\n",currrrrrrrrrrrrrr);
 			  }
 			  if(pa_errr==1)
 			  rk_send_kp8_key();
 			   	queue_delayed_work(di->charger_wq, &di->bat_cur_delay_work,msecs_to_jiffies(50));
+			  }
+			   	
 			   
 }
 
@@ -4450,9 +4498,12 @@ static int rk816_battery_probe(struct platform_device *pdev)
 
 
 	//phm add
+	
 	INIT_DELAYED_WORK(&di->bat_cur_delay_work, rk816_battery_cur_work);
+
+	  
 		queue_delayed_work(di->charger_wq, &di->bat_cur_delay_work,
-			   msecs_to_jiffies(1500));
+			   msecs_to_jiffies(2000));
 
 	
 	BAT_INFO("driver version %s\n", DRIVER_VERSION);

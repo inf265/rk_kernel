@@ -447,7 +447,7 @@ static const struct file_operations mf175x_dev_fops = {
 	.unlocked_ioctl  = mf175x_dev_ioctl,
 };
 
-extern int tige_box_v2(void);
+extern bool tige_box_v2(void);
 
 static int mf175x_probe(struct i2c_client *client,
 		const struct i2c_device_id *id)

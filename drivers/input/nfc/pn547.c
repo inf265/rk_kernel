@@ -390,7 +390,7 @@ static const struct file_operations pn547_dev_fops = {
 };
 
 
-extern int tige_box_v2(void);
+extern bool tige_box_v2(void);
 
 static int pn547_probe(struct i2c_client *client,
 		const struct i2c_device_id *id)
