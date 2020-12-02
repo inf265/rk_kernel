@@ -3602,7 +3602,7 @@ static bool is_current(struct rk816_battery *di)
 }
 
 
-	
+bool oldchr;	
 
 static void rk816_battery_cur_work(struct work_struct *work)
 {
@@ -3726,6 +3726,15 @@ static void rk816_battery_cur_work(struct work_struct *work)
 			  }
 			  if(pa_errr==1)
 			  rk_send_kp8_key();
+			  
+			  
+			  if(oldchr != is_current(di))
+			  	{
+			  		printk("oldchr != is_current\n");
+			  	queue_delayed_work(di->charger_wq, &di->bat_cur_delay_work,msecs_to_jiffies(3000));
+			  	 oldchr = is_current(di);
+			  	}
+			  	else
 			   	queue_delayed_work(di->charger_wq, &di->bat_cur_delay_work,msecs_to_jiffies(50));
 			  }
 			   	
