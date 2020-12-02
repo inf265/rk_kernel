@@ -1993,7 +1993,7 @@ static struct rk312x_reg_val_typ capture_power_down_list[] = {
 	
  	if(type == RK312x_CODEC_PLAYBACK){
 		isline = 0;
- 		for (i = 0; i < RK312x_CODEC_CAPTURE_POWER_UP_LIST_LEN; i++){
+ 		for (i = 0; i < RK312x_CODEC_PLAYBACK_POWER_UP_LIST_LEN; i++){
  			snd_soc_write(codec,playback_power_up_list[i].reg,playback_power_up_list[i].value);
  			usleep_range(1000, 1100);
  		}	
@@ -2611,8 +2611,8 @@ static irqreturn_t codec_hp_det_isr(int irq, void *data)
 				//gpio_direction_output(30,1);
 	//	gpio_direction_output(35,0);
 		printk("abc===%d\n",abc);
-		if(abc==0)
-		gpio_set_value(rk312x_priv->spk_ctl_gpio, 1);
+		//if(abc==0)
+		//gpio_set_value(rk312x_priv->spk_ctl_gpio, 1);
 		rk312x_priv->if_hp = 0;
 		writel_relaxed(val|0x10001, RK_GRF_VIRT + GRF_ACODEC_CON);
 		
@@ -2905,7 +2905,7 @@ regulator_ble = regulator_get(NULL,"rk816_ldo4");
 			/* goto err_; */
 			rk312x->spk_ctl_gpio = INVALID_GPIO;
 		}
-		gpio_direction_output(rk312x->spk_ctl_gpio, rk312x->spk_active_level);
+		gpio_direction_output(rk312x->spk_ctl_gpio, !rk312x->spk_active_level);
 	}
 	DBG(KERN_INFO"%s : spk_ctl_gpio %d active_level %d \n", __func__,
 		rk312x->spk_ctl_gpio, rk312x->spk_active_level);
