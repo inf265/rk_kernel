@@ -128,7 +128,7 @@ static struct wake_lock batt_wake_lock;//hw
 #define MIN_FCC				500
 
 /* DC ADC */
-#define DC_ADC_TRIGGER			150
+#define DC_ADC_TRIGGER			500
 
 static const char *bat_status[] = {
 	"charge off", "dead charge", "trickle charge", "cc cv",
