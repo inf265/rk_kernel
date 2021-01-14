@@ -485,7 +485,7 @@ static void write_command(unsigned char val) {
     set_spi_mosi(0);
     set_spi_clk(0);
     udelay(1);
-    set_spi_clk(1);
+	set_spi_clk(1);
     lcd_write_byte(val);
     set_spi_cs(1);
 }
@@ -496,7 +496,7 @@ static void write_data(unsigned char val) {
     set_spi_mosi(1);
     set_spi_clk(0);
     udelay(1);
-    set_spi_clk(1);
+	set_spi_clk(1);
     lcd_write_byte(val);
     set_spi_cs(1);
 }
@@ -640,569 +640,618 @@ static void write_ctrl_data(unsigned char* cmds, const unsigned int len) {
 
 static void ST7701S_Sleep_out(void)
 	{
-	  gpio_direction_output(scl_gpio, 0);
-	  gpio_direction_output(sdi_gpio, 0);
+		   gpio_direction_output(scl_gpio, 0);
+		   gpio_direction_output(sdi_gpio, 0);
+	 
+			 gpio_direction_output(cs_gpio, 0);
+		 
+			 gpio_direction_output(rst_gpio, 1);
+			 mdelay(10);
+			 gpio_direction_output(rst_gpio, 0);
+			 mdelay(60);
+			 gpio_direction_output(rst_gpio, 1);
+	 		 mdelay(60);
+			 write_command(0xF0);
+			 write_data(0x55);
+			 write_data(0xAA);
+			 write_data(0x52);
+			 write_data(0x08);
+			 write_data(0x00);
+			 
+			// write_command(0xba);
+			// mdelay(700);
+			 
+			 write_command(0xF6);
+			 write_data(0x5A);
+			 write_data(0x87);
+			 
+			 write_command(0xC1);
+			 write_data(0x3f);
+			 
+			 write_command(0xC2);
+			 write_data(0x0E);
+			 
+			 write_command(0xC6);
+			 write_data(0xF8);
+			 
+			 //write_command(0xC8);
+			 //write_data(0xc9);
+			 
+			 write_command(0xC9);
+			 write_data(0x10);
+			 
+			 write_command(0xCD);
+			 write_data(0x25);
+			 
+			 write_command(0x86);
+			 write_data(0x99);
+			 write_data(0xa3);
+			 write_data(0xa3);
+			 write_data(0x11);
+			 
+			 write_command(0x87);
+			 write_data(0x04);
+			 write_data(0x03);
+			 write_data(0x66);
+			 
+			 write_command(0xAC);
+			 write_data(0x65);
+			 
+			 write_command(0xF8);
+			 write_data(0x8A);
+			 
+			 write_command(0xA7);
+			 write_data(0x47);
+			 
+			 write_command(0xA0);
+			 write_data(0x99);
+			 
+			 write_command(0xFA);
+			 write_data(0x08);
+			 write_data(0x08);
+			 write_data(0x00);
+			 write_data(0x04);
+			 
+			 write_command(0x71);
+			 write_data(0x48);
+			 
+			 write_command(0x72);
+			 write_data(0x48);
+			 
+			 write_command(0x73);
+			 write_data(0x00);
+			 write_data(0x44);
+			 
+			 write_command(0xA3);
+			 write_data(0xee);
+			 
+			 write_command(0xFD);
+			 write_data(0x28);
+			 write_data(0x3C);
+			 write_data(0x00);
+			 
+			 write_command(0x97);
+			 write_data(0xEE);
+			 
+			 write_command(0x83);
+			 write_data(0x93);
+			 
+			 write_command(0x9A);
+			 write_data(0x4a);
+			 
+			 write_command(0x9B);
+			 write_data(0x22);
+			 
+			 write_command(0x82);
+			 write_data(0x00);
+			 write_data(0x00);
+			 
+			 write_command(0x80);
+			 write_data(0x3a);
+			 
+			 write_command(0xB1);
+			 write_data(0x10);
+			 
+			 write_command(0x7A);
+			 write_data(0x13);
+			 write_data(0x1A);
+			 
+			 write_command(0x7B);
+			 write_data(0x13);
+			 write_data(0x1A);
+			 
+			 write_command(0x6D);
+			 write_data(0x1E);
+			 write_data(0x00);
+			 write_data(0x09);
+			 write_data(0x0f);
+			 write_data(0x01);
+			 write_data(0x1F);
+			 write_data(0x1E);
+			 write_data(0x1E);
+			 write_data(0x1E);
+			 write_data(0x1E);
+			 write_data(0x1E);
+			 write_data(0x1E);
+			 write_data(0x1E);
+			 write_data(0x1E);
+			 write_data(0x1E);
+			 write_data(0x1E);
+			 write_data(0x1E);
+			 write_data(0x1E);
+			 write_data(0x1E);
+			 write_data(0x1E);
+			 write_data(0x1E);
+			 write_data(0x1E);
+			 write_data(0x1E);
+			 write_data(0x1E);
+			 write_data(0x1E);
+			 write_data(0x1E);
+			 write_data(0x1F);
+			 write_data(0x08);
+			 write_data(0x10);
+			 write_data(0x0a);
+			 write_data(0x00);
+			 write_data(0x1E);
+			 
+			 write_command(0x64);
+			 write_data(0x18);
+			 write_data(0x07);
+			 write_data(0x03);
+			 write_data(0x21);
+			 write_data(0x03);
+			 write_data(0x03);
+			 write_data(0x18);
+			 write_data(0x06);
+			 write_data(0x03);
+			 write_data(0x22);
+			 write_data(0x03);
+			 write_data(0x03);
+			 write_data(0x7a);
+			 write_data(0x7a);
+			 write_data(0x7a);
+			 write_data(0x7a);
+			 
+			 write_command(0x67);
+			 write_data(0x18);
+			 write_data(0x05);
+			 write_data(0x03);
+			 write_data(0x23);
+			 write_data(0x03);
+			 write_data(0x03);
+			 write_data(0x18);
+			 write_data(0x04);
+			 write_data(0x03);
+			 write_data(0x24);
+			 write_data(0x03);
+			 write_data(0x03);
+			 write_data(0x7a);
+			 write_data(0x7a);
+			 write_data(0x7a);
+			 write_data(0x7a);
+			 
+			 write_command(0x60);
+			 write_data(0x18);
+			 write_data(0x08);
+			 write_data(0x7a);
+			 write_data(0x7a);
+			 write_data(0x18);
+			 write_data(0x00);
+			 write_data(0x7a);
+			 write_data(0x7a);
+			 
+			 write_command(0x63);
+			 write_data(0x18);
+			 write_data(0x00);
+			 write_data(0x7a);
+			 write_data(0x7a);
+			 write_data(0x18);
+			 write_data(0x07);
+			 write_data(0x7a);
+			 write_data(0x7a);
+			 
+			 write_command(0x69);
+			 write_data(0x14);
+			 write_data(0x22);
+			 write_data(0x14);
+			 write_data(0x22);
+			 write_data(0x44);
+			 write_data(0x22);
+			 write_data(0x08);
+		
+			 write_command(0xD1);
+			 write_data(0x00);
+			 write_data(0x00);
+			 write_data(0x00);
+			 write_data(0x24);
+			 write_data(0x00);
+			 write_data(0x5A);
+			 write_data(0x00);
+			 write_data(0x7E);
+			 write_data(0x00);
+			 write_data(0x9D);
+			 write_data(0x00);
+			 write_data(0xCA);
+			 write_data(0x00);
+			 write_data(0xEF);
+			 write_data(0x01);
+			 write_data(0x2A);
+			 write_data(0x01);
+			 write_data(0x5E);
+			 write_data(0x01);
+			 write_data(0xAD);
+			 write_data(0x01);
+			 write_data(0xEE);
+			 write_data(0x02);
+			 write_data(0x55);
+			 write_data(0x02);
+			 write_data(0xA2);
+			 write_data(0x02);
+			 write_data(0xA5);
+			 write_data(0x02);
+			 write_data(0xEA);
+			 write_data(0x03);
+			 write_data(0x40);
+			 write_data(0x03);
+			 write_data(0x70);
+			 write_data(0x03);
+			 write_data(0xA4);
+			 write_data(0x03);
+			 write_data(0xB8);
+			 write_data(0x03);
+			 write_data(0xCA);
+			 write_data(0x03);
+			 write_data(0xD9);
+			 write_data(0x03);
+			 write_data(0xEA);
+			 write_data(0x03);
+			 write_data(0xEF);
+			 write_data(0x03);
+			 write_data(0xFA);
+			 write_data(0x03);
+			 write_data(0xFE);
+			 write_data(0x03);
+			 write_data(0xFF);
+			 
+			 write_command(0xD2);
+			 write_data(0x00);
+			 write_data(0x00);
+			 write_data(0x00);
+			 write_data(0x24);
+			 write_data(0x00);
+			 write_data(0x5A);
+			 write_data(0x00);
+			 write_data(0x7E);
+			 write_data(0x00);
+			 write_data(0x9D);
+			 write_data(0x00);
+			 write_data(0xCA);
+			 write_data(0x00);
+			 write_data(0xEF);
+			 write_data(0x01);
+			 write_data(0x2A);
+			 write_data(0x01);
+			 write_data(0x5E);
+			 write_data(0x01);
+			 write_data(0xAD);
+			 write_data(0x01);
+			 write_data(0xEE);
+			 write_data(0x02);
+			 write_data(0x55);
+			 write_data(0x02);
+			 write_data(0xA2);
+			 write_data(0x02);
+			 write_data(0xA5);
+			 write_data(0x02);
+			 write_data(0xEA);
+			 write_data(0x03);
+			 write_data(0x40);
+			 write_data(0x03);
+			 write_data(0x70);
+			 write_data(0x03);
+			 write_data(0xA4);
+			 write_data(0x03);
+			 write_data(0xB8);
+			 write_data(0x03);
+			 write_data(0xCA);
+			 write_data(0x03);
+			 write_data(0xD9);
+			 write_data(0x03);
+			 write_data(0xEA);
+			 write_data(0x03);
+			 write_data(0xEF);
+			 write_data(0x03);
+			 write_data(0xFA);
+			 write_data(0x03);
+			 write_data(0xFE);
+			 write_data(0x03);
+			 write_data(0xFF);
+			 
+			 write_command(0xD3);
+			 write_data(0x00);
+			 write_data(0x00);
+			 write_data(0x00);
+			 write_data(0x24);
+			 write_data(0x00);
+			 write_data(0x5A);
+			 write_data(0x00);
+			 write_data(0x7E);
+			 write_data(0x00);
+			 write_data(0x9D);
+			 write_data(0x00);
+			 write_data(0xCA);
+			 write_data(0x00);
+			 write_data(0xEF);
+			 write_data(0x01);
+			 write_data(0x2A);
+			 write_data(0x01);
+			 write_data(0x5E);
+			 write_data(0x01);
+			 write_data(0xAD);
+			 write_data(0x01);
+			 write_data(0xEE);
+			 write_data(0x02);
+			 write_data(0x55);
+			 write_data(0x02);
+			 write_data(0xA2);
+			 write_data(0x02);
+			 write_data(0xA5);
+			 write_data(0x02);
+			 write_data(0xEA);
+			 write_data(0x03);
+			 write_data(0x40);
+			 write_data(0x03);
+			 write_data(0x70);
+			 write_data(0x03);
+			 write_data(0xA4);
+			 write_data(0x03);
+			 write_data(0xB8);
+			 write_data(0x03);
+			 write_data(0xCA);
+			 write_data(0x03);
+			 write_data(0xD9);
+			 write_data(0x03);
+			 write_data(0xEA);
+			 write_data(0x03);
+			 write_data(0xEF);
+			 write_data(0x03);
+			 write_data(0xFA);
+			 write_data(0x03);
+			 write_data(0xFE);
+			 write_data(0x03);
+			 write_data(0xFF);
+			 
+			 write_command(0xD4);
+			 write_data(0x00);
+			 write_data(0x00);
+			 write_data(0x00);
+			 write_data(0x24);
+			 write_data(0x00);
+			 write_data(0x5A);
+			 write_data(0x00);
+			 write_data(0x7E);
+			 write_data(0x00);
+			 write_data(0x9D);
+			 write_data(0x00);
+			 write_data(0xCA);
+			 write_data(0x00);
+			 write_data(0xEF);
+			 write_data(0x01);
+			 write_data(0x2A);
+			 write_data(0x01);
+			 write_data(0x5E);
+			 write_data(0x01);
+			 write_data(0xAD);
+			 write_data(0x01);
+			 write_data(0xEE);
+			 write_data(0x02);
+			 write_data(0x55);
+			 write_data(0x02);
+			 write_data(0xA2);
+			 write_data(0x02);
+			 write_data(0xA5);
+			 write_data(0x02);
+			 write_data(0xEA);
+			 write_data(0x03);
+			 write_data(0x40);
+			 write_data(0x03);
+			 write_data(0x70);
+			 write_data(0x03);
+			 write_data(0xA4);
+			 write_data(0x03);
+			 write_data(0xB8);
+			 write_data(0x03);
+			 write_data(0xCA);
+			 write_data(0x03);
+			 write_data(0xD9);
+			 write_data(0x03);
+			 write_data(0xEA);
+			 write_data(0x03);
+			 write_data(0xEF);
+			 write_data(0x03);
+			 write_data(0xFA);
+			 write_data(0x03);
+			 write_data(0xFE);
+			 write_data(0x03);
+			 write_data(0xFF);
+			 
+			 write_command(0xD5);
+			 write_data(0x00);
+			 write_data(0x00);
+			 write_data(0x00);
+			 write_data(0x24);
+			 write_data(0x00);
+			 write_data(0x5A);
+			 write_data(0x00);
+			 write_data(0x7E);
+			 write_data(0x00);
+			 write_data(0x9D);
+			 write_data(0x00);
+			 write_data(0xCA);
+			 write_data(0x00);
+			 write_data(0xEF);
+			 write_data(0x01);
+			 write_data(0x2A);
+			 write_data(0x01);
+			 write_data(0x5E);
+			 write_data(0x01);
+			 write_data(0xAD);
+			 write_data(0x01);
+			 write_data(0xEE);
+			 write_data(0x02);
+			 write_data(0x55);
+			 write_data(0x02);
+			 write_data(0xA2);
+			 write_data(0x02);
+			 write_data(0xA5);
+			 write_data(0x02);
+			 write_data(0xEA);
+			 write_data(0x03);
+			 write_data(0x40);
+			 write_data(0x03);
+			 write_data(0x70);
+			 write_data(0x03);
+			 write_data(0xA4);
+			 write_data(0x03);
+			 write_data(0xB8);
+			 write_data(0x03);
+			 write_data(0xCA);
+			 write_data(0x03);
+			 write_data(0xD9);
+			 write_data(0x03);
+			 write_data(0xEA);
+			 write_data(0x03);
+			 write_data(0xEF);
+			 write_data(0x03);
+			 write_data(0xFA);
+			 write_data(0x03);
+			 write_data(0xFE);
+			 write_data(0x03);
+			 write_data(0xFF);
+			 
+			 write_command(0xD6);
+			 write_data(0x00);
+			 write_data(0x00);
+			 write_data(0x00);
+			 write_data(0x24);
+			 write_data(0x00);
+			 write_data(0x5A);
+			 write_data(0x00);
+			 write_data(0x7E);
+			 write_data(0x00);
+			 write_data(0x9D);
+			 write_data(0x00);
+			 write_data(0xCA);
+			 write_data(0x00);
+			 write_data(0xEF);
+			 write_data(0x01);
+			 write_data(0x2A);
+			 write_data(0x01);
+			 write_data(0x5E);
+			 write_data(0x01);
+			 write_data(0xAD);
+			 write_data(0x01);
+			 write_data(0xEE);
+			 write_data(0x02);
+			 write_data(0x55);
+			 write_data(0x02);
+			 write_data(0xA2);
+			 write_data(0x02);
+			 write_data(0xA5);
+			 write_data(0x02);
+			 write_data(0xEA);
+			 write_data(0x03);
+			 write_data(0x40);
+			 write_data(0x03);
+			 write_data(0x70);
+			 write_data(0x03);
+			 write_data(0xA4);
+			 write_data(0x03);
+			 write_data(0xB8);
+			 write_data(0x03);
+			 write_data(0xCA);
+			 write_data(0x03);
+			 write_data(0xD9);
+			 write_data(0x03);
+			 write_data(0xEA);
+			 write_data(0x03);
+			 write_data(0xEF);
+			 write_data(0x03);
+			 write_data(0xFA);
+			 write_data(0x03);
+			 write_data(0xFE);
+			 write_data(0x03);
+			 write_data(0xFF);
+	 
+			 write_command(0x3A);
+			 write_data(0x55);
 
-		gpio_direction_output(cs_gpio, 0);
-	
-		gpio_direction_output(rst_gpio, 1);
-		mdelay(10);
-		gpio_direction_output(rst_gpio, 0);
-		mdelay(10);
-		gpio_direction_output(rst_gpio, 1);
+			 write_command(0xF0);
+			 write_data(0x55);
+			 write_data(0xAA);
+			 write_data(0x52);
+			 write_data(0x08);
+			 write_data(0x00);
+			 
+			 write_command(0xF6);
+			 write_data(0x5A);
+			 write_data(0x87);
+			 
+			 write_command(0xC1);
+			 write_data(0x3f);
+			 
+			 write_command(0xC2);
+			 write_data(0x0E);
+			 
+			 write_command(0xC6);
+			 write_data(0xF8);
+			 
+			 write_command(0xC9);
+			 write_data(0x10);
+			 
+			 write_command(0xCD);
+			 write_data(0x25);
+			 
+			 write_command(0x86);
+			 write_data(0x99);
+			 write_data(0xa3);
+			 write_data(0xa3);
+			 write_data(0x11);
+			 
+			 write_command(0x87);
+			 write_data(0x04);
+			 write_data(0x03);
+			 write_data(0x66);
+			 
+			 write_command(0xAC);
+			 write_data(0x65);
+			 
+			 write_command(0xF8);
+			 write_data(0x8A);
+			 
+			 write_command(0xA7);
+			 write_data(0x47);
+			 
+			 write_command(0xA0);
+			 write_data(0x99);
+			 
 
-		write_command(0xF0);
-		write_data(0x55);
-		write_data(0xAA);
-		write_data(0x52);
-		write_data(0x08);
-		write_data(0x00);
-		
-		write_command(0xF6);
-		write_data(0x5A);
-		write_data(0x87);
-		
-		write_command(0xC1);
-		write_data(0x3f);
-		
-		write_command(0xC2);
-		write_data(0x0E);
-		
-		write_command(0xC6);
-		write_data(0xF8);
-		
-		write_command(0xC9);
-		write_data(0x10);
-		
-		write_command(0xCD);
-		write_data(0x25);
-		
-		write_command(0x86);
-		write_data(0x99);
-		write_data(0xa3);
-		write_data(0xa3);
-		write_data(0x11);
-		
-		write_command(0x87);
-		write_data(0x04);
-		write_data(0x03);
-		write_data(0x66);
-		
-		write_command(0xAC);
-		write_data(0x65);
-		
-		write_command(0xF8);
-		write_data(0x8A);
-		
-		write_command(0xA7);
-		write_data(0x47);
-		
-		write_command(0xA0);
-		write_data(0xaa);
-		
-		write_command(0xFA);
-		write_data(0x08);
-		write_data(0x08);
-		write_data(0x00);
-		write_data(0x04);
-		
-		write_command(0x71);
-		write_data(0x48);
-		
-		write_command(0x72);
-		write_data(0x48);
-		
-		write_command(0x73);
-		write_data(0x00);
-		write_data(0x44);
-		
-		write_command(0xA3);
-		write_data(0xee);
-		
-		write_command(0xFD);
-		write_data(0x28);
-		write_data(0x3C);
-		write_data(0x00);
-		
-		write_command(0x97);
-		write_data(0xEE);
-		
-		write_command(0x83);
-		write_data(0x93);
-		
-		write_command(0x9A);
-		write_data(0x4a);
-		
-		write_command(0x9B);
-		write_data(0x22);
-		
-		write_command(0x82);
-		write_data(0x00);
-		write_data(0x00);
-		
-		write_command(0x80);
-		write_data(0x28);
-		
-		write_command(0xB1);
-		write_data(0x10);
-		
-		write_command(0x7A);
-		write_data(0x13);
-		write_data(0x1A);
-		
-		write_command(0x7B);
-		write_data(0x13);
-		write_data(0x1A);
-		
-		write_command(0x6D);
-		write_data(0x1E);
-		write_data(0x00);
-		write_data(0x09);
-		write_data(0x0f);
-		write_data(0x01);
-		write_data(0x1F);
-		write_data(0x1E);
-		write_data(0x1E);
-		write_data(0x1E);
-		write_data(0x1E);
-		write_data(0x1E);
-		write_data(0x1E);
-		write_data(0x1E);
-		write_data(0x1E);
-		write_data(0x1E);
-		write_data(0x1E);
-		write_data(0x1E);
-		write_data(0x1E);
-		write_data(0x1E);
-		write_data(0x1E);
-		write_data(0x1E);
-		write_data(0x1E);
-		write_data(0x1E);
-		write_data(0x1E);
-		write_data(0x1E);
-		write_data(0x1E);
-		write_data(0x1F);
-		write_data(0x08);
-		write_data(0x10);
-		write_data(0x0a);
-		write_data(0x00);
-		write_data(0x1E);
-		
-		write_command(0x64);
-		write_data(0x18);
-		write_data(0x07);
-		write_data(0x03);
-		write_data(0x21);
-		write_data(0x03);
-		write_data(0x03);
-		write_data(0x18);
-		write_data(0x06);
-		write_data(0x03);
-		write_data(0x22);
-		write_data(0x03);
-		write_data(0x03);
-		write_data(0x7a);
-		write_data(0x7a);
-		write_data(0x7a);
-		write_data(0x7a);
-		
-		write_command(0x67);
-		write_data(0x18);
-		write_data(0x05);
-		write_data(0x03);
-		write_data(0x23);
-		write_data(0x03);
-		write_data(0x03);
-		write_data(0x18);
-		write_data(0x04);
-		write_data(0x03);
-		write_data(0x24);
-		write_data(0x03);
-		write_data(0x03);
-		write_data(0x7a);
-		write_data(0x7a);
-		write_data(0x7a);
-		write_data(0x7a);
-		
-		write_command(0x60);
-		write_data(0x18);
-		write_data(0x08);
-		write_data(0x7a);
-		write_data(0x7a);
-		write_data(0x18);
-		write_data(0x00);
-		write_data(0x7a);
-		write_data(0x7a);
-		
-		write_command(0x63);
-		write_data(0x18);
-		write_data(0x00);
-		write_data(0x7a);
-		write_data(0x7a);
-		write_data(0x18);
-		write_data(0x07);
-		write_data(0x7a);
-		write_data(0x7a);
-		
-		write_command(0x69);
-		write_data(0x14);
-		write_data(0x22);
-		write_data(0x14);
-		write_data(0x22);
-		write_data(0x44);
-		write_data(0x22);
-		write_data(0x08);
-		
-		write_command(0xD1);
-		write_data(0x00);
-		write_data(0x00);
-		write_data(0x00);
-		write_data(0x24);
-		write_data(0x00);
-		write_data(0x5A);
-		write_data(0x00);
-		write_data(0x7E);
-		write_data(0x00);
-		write_data(0x9D);
-		write_data(0x00);
-		write_data(0xCA);
-		write_data(0x00);
-		write_data(0xEF);
-		write_data(0x01);
-		write_data(0x2A);
-		write_data(0x01);
-		write_data(0x5E);
-		write_data(0x01);
-		write_data(0xAD);
-		write_data(0x01);
-		write_data(0xEE);
-		write_data(0x02);
-		write_data(0x55);
-		write_data(0x02);
-		write_data(0xA2);
-		write_data(0x02);
-		write_data(0xA5);
-		write_data(0x02);
-		write_data(0xEA);
-		write_data(0x03);
-		write_data(0x40);
-		write_data(0x03);
-		write_data(0x70);
-		write_data(0x03);
-		write_data(0xA4);
-		write_data(0x03);
-		write_data(0xB8);
-		write_data(0x03);
-		write_data(0xCA);
-		write_data(0x03);
-		write_data(0xD9);
-		write_data(0x03);
-		write_data(0xEA);
-		write_data(0x03);
-		write_data(0xEF);
-		write_data(0x03);
-		write_data(0xFA);
-		write_data(0x03);
-		write_data(0xFE);
-		write_data(0x03);
-		write_data(0xFF);
-		
-		write_command(0xD2);
-		write_data(0x00);
-		write_data(0x00);
-		write_data(0x00);
-		write_data(0x24);
-		write_data(0x00);
-		write_data(0x5A);
-		write_data(0x00);
-		write_data(0x7E);
-		write_data(0x00);
-		write_data(0x9D);
-		write_data(0x00);
-		write_data(0xCA);
-		write_data(0x00);
-		write_data(0xEF);
-		write_data(0x01);
-		write_data(0x2A);
-		write_data(0x01);
-		write_data(0x5E);
-		write_data(0x01);
-		write_data(0xAD);
-		write_data(0x01);
-		write_data(0xEE);
-		write_data(0x02);
-		write_data(0x55);
-		write_data(0x02);
-		write_data(0xA2);
-		write_data(0x02);
-		write_data(0xA5);
-		write_data(0x02);
-		write_data(0xEA);
-		write_data(0x03);
-		write_data(0x40);
-		write_data(0x03);
-		write_data(0x70);
-		write_data(0x03);
-		write_data(0xA4);
-		write_data(0x03);
-		write_data(0xB8);
-		write_data(0x03);
-		write_data(0xCA);
-		write_data(0x03);
-		write_data(0xD9);
-		write_data(0x03);
-		write_data(0xEA);
-		write_data(0x03);
-		write_data(0xEF);
-		write_data(0x03);
-		write_data(0xFA);
-		write_data(0x03);
-		write_data(0xFE);
-		write_data(0x03);
-		write_data(0xFF);
-		
-		write_command(0xD3);
-		write_data(0x00);
-		write_data(0x00);
-		write_data(0x00);
-		write_data(0x24);
-		write_data(0x00);
-		write_data(0x5A);
-		write_data(0x00);
-		write_data(0x7E);
-		write_data(0x00);
-		write_data(0x9D);
-		write_data(0x00);
-		write_data(0xCA);
-		write_data(0x00);
-		write_data(0xEF);
-		write_data(0x01);
-		write_data(0x2A);
-		write_data(0x01);
-		write_data(0x5E);
-		write_data(0x01);
-		write_data(0xAD);
-		write_data(0x01);
-		write_data(0xEE);
-		write_data(0x02);
-		write_data(0x55);
-		write_data(0x02);
-		write_data(0xA2);
-		write_data(0x02);
-		write_data(0xA5);
-		write_data(0x02);
-		write_data(0xEA);
-		write_data(0x03);
-		write_data(0x40);
-		write_data(0x03);
-		write_data(0x70);
-		write_data(0x03);
-		write_data(0xA4);
-		write_data(0x03);
-		write_data(0xB8);
-		write_data(0x03);
-		write_data(0xCA);
-		write_data(0x03);
-		write_data(0xD9);
-		write_data(0x03);
-		write_data(0xEA);
-		write_data(0x03);
-		write_data(0xEF);
-		write_data(0x03);
-		write_data(0xFA);
-		write_data(0x03);
-		write_data(0xFE);
-		write_data(0x03);
-		write_data(0xFF);
-		
-		write_command(0xD4);
-		write_data(0x00);
-		write_data(0x00);
-		write_data(0x00);
-		write_data(0x24);
-		write_data(0x00);
-		write_data(0x5A);
-		write_data(0x00);
-		write_data(0x7E);
-		write_data(0x00);
-		write_data(0x9D);
-		write_data(0x00);
-		write_data(0xCA);
-		write_data(0x00);
-		write_data(0xEF);
-		write_data(0x01);
-		write_data(0x2A);
-		write_data(0x01);
-		write_data(0x5E);
-		write_data(0x01);
-		write_data(0xAD);
-		write_data(0x01);
-		write_data(0xEE);
-		write_data(0x02);
-		write_data(0x55);
-		write_data(0x02);
-		write_data(0xA2);
-		write_data(0x02);
-		write_data(0xA5);
-		write_data(0x02);
-		write_data(0xEA);
-		write_data(0x03);
-		write_data(0x40);
-		write_data(0x03);
-		write_data(0x70);
-		write_data(0x03);
-		write_data(0xA4);
-		write_data(0x03);
-		write_data(0xB8);
-		write_data(0x03);
-		write_data(0xCA);
-		write_data(0x03);
-		write_data(0xD9);
-		write_data(0x03);
-		write_data(0xEA);
-		write_data(0x03);
-		write_data(0xEF);
-		write_data(0x03);
-		write_data(0xFA);
-		write_data(0x03);
-		write_data(0xFE);
-		write_data(0x03);
-		write_data(0xFF);
-		
-		write_command(0xD5);
-		write_data(0x00);
-		write_data(0x00);
-		write_data(0x00);
-		write_data(0x24);
-		write_data(0x00);
-		write_data(0x5A);
-		write_data(0x00);
-		write_data(0x7E);
-		write_data(0x00);
-		write_data(0x9D);
-		write_data(0x00);
-		write_data(0xCA);
-		write_data(0x00);
-		write_data(0xEF);
-		write_data(0x01);
-		write_data(0x2A);
-		write_data(0x01);
-		write_data(0x5E);
-		write_data(0x01);
-		write_data(0xAD);
-		write_data(0x01);
-		write_data(0xEE);
-		write_data(0x02);
-		write_data(0x55);
-		write_data(0x02);
-		write_data(0xA2);
-		write_data(0x02);
-		write_data(0xA5);
-		write_data(0x02);
-		write_data(0xEA);
-		write_data(0x03);
-		write_data(0x40);
-		write_data(0x03);
-		write_data(0x70);
-		write_data(0x03);
-		write_data(0xA4);
-		write_data(0x03);
-		write_data(0xB8);
-		write_data(0x03);
-		write_data(0xCA);
-		write_data(0x03);
-		write_data(0xD9);
-		write_data(0x03);
-		write_data(0xEA);
-		write_data(0x03);
-		write_data(0xEF);
-		write_data(0x03);
-		write_data(0xFA);
-		write_data(0x03);
-		write_data(0xFE);
-		write_data(0x03);
-		write_data(0xFF);
-		
-		write_command(0xD6);
-		write_data(0x00);
-		write_data(0x00);
-		write_data(0x00);
-		write_data(0x24);
-		write_data(0x00);
-		write_data(0x5A);
-		write_data(0x00);
-		write_data(0x7E);
-		write_data(0x00);
-		write_data(0x9D);
-		write_data(0x00);
-		write_data(0xCA);
-		write_data(0x00);
-		write_data(0xEF);
-		write_data(0x01);
-		write_data(0x2A);
-		write_data(0x01);
-		write_data(0x5E);
-		write_data(0x01);
-		write_data(0xAD);
-		write_data(0x01);
-		write_data(0xEE);
-		write_data(0x02);
-		write_data(0x55);
-		write_data(0x02);
-		write_data(0xA2);
-		write_data(0x02);
-		write_data(0xA5);
-		write_data(0x02);
-		write_data(0xEA);
-		write_data(0x03);
-		write_data(0x40);
-		write_data(0x03);
-		write_data(0x70);
-		write_data(0x03);
-		write_data(0xA4);
-		write_data(0x03);
-		write_data(0xB8);
-		write_data(0x03);
-		write_data(0xCA);
-		write_data(0x03);
-		write_data(0xD9);
-		write_data(0x03);
-		write_data(0xEA);
-		write_data(0x03);
-		write_data(0xEF);
-		write_data(0x03);
-		write_data(0xFA);
-		write_data(0x03);
-		write_data(0xFE);
-		write_data(0x03);
-		write_data(0xFF);
-
-		write_command(0x3A);
-		write_data(0x55);
-
-		write_command(0xb0);
-		write_data(0x00);
-		write_data(0x0e);
-		write_data(0x0e);
-		write_data(0x14);
-		write_data(0x04);
-
-write_command(0x11);
-mdelay(120);
-
-write_command(0x29);
-mdelay(20);
-
-
-}
+	 write_command(0x11);
+	 mdelay(120);
+	 
+	 write_command(0x29);
+	 mdelay(20);
+	 
+	 
+	 }
 
  static void spi_init2(void)
 {
 
 
 
+/*
 #if 1
-//*******************************xunrui 3.9*********************************************//
 
 
 write_command(0x11);
@@ -1780,6 +1829,7 @@ write_data(0x00);
 mdelay(1);
 #endif
 
+*/
 }
 #endif
 static int is_first_time = 0;
