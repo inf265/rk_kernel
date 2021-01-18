@@ -480,7 +480,8 @@ static void lcd_write_byte(unsigned char val) {
 }
 
 static void write_command(unsigned char val) {
-    usleep_range(1000, 1200);
+    //usleep_range(1000, 1200);
+    udelay(2);
     set_spi_cs(0);
     set_spi_mosi(0);
     set_spi_clk(0);
@@ -491,7 +492,8 @@ static void write_command(unsigned char val) {
 }
 
 static void write_data(unsigned char val) {
-    usleep_range(1000, 1200);
+    //usleep_range(1000, 1200);
+    udelay(2);
     set_spi_cs(0);
     set_spi_mosi(1);
     set_spi_clk(0);
