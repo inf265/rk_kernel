@@ -147,7 +147,9 @@
   sdi-gpio = <&gpio1 GPIO_B1 GPIO_ACTIVE_HIGH>;
   scl-gpio = <&gpio1 GPIO_B0 GPIO_ACTIVE_HIGH>;
 	rst-gpio = <&gpio0 GPIO_D0 GPIO_ACTIVE_HIGH>;
-	select-lcd-gpio = <&gpio2 GPIO_D2 GPIO_ACTIVE_HIGH>;
+	uart0tx-gpio = <&gpio2 GPIO_D2 GPIO_ACTIVE_HIGH>;
+  uart0cts-gpio = <&gpio2 GPIO_D5 GPIO_ACTIVE_HIGH>;
+	uart0rx-gpio = <&gpio2 GPIO_D3 GPIO_ACTIVE_HIGH>;
 	
 	rockchip,fb-win-map = <FB_DEFAULT_ORDER>;
 	power_ctr: power_ctr {
